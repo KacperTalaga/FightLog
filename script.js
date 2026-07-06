@@ -21,7 +21,7 @@ const PLAN = [
             {id: 'db-curl', name: 'Curl hantlami', sets: 3, reps: '8-10/r', weight: '18-20', tag: 'isolation', notes: 'Stojąc, na zmianę. Bez kiwania.'},
             {id: 'face-pull', name: 'Face pull', sets: 3, reps: '15-20', weight: null, tag: 'isolation', notes: 'Łokcie wysoko, ściśnij łopatki 1s.'}
         ],
-        finisher: {name: 'Skakanka HIIT', detail: '5x1min / 30s rest (~8 min)', notes: 'Progresja: skracaj rest 30s→20s→15s co 2 tyg.'}
+        finisher: {name: 'Skakanka HIIT', detail: '5x1min / 30s rest (~8 min)', notes: 'Progresja: skracaj rest 30s→20s→15s co 2 tyg.', icon: '⚡', tag: 'finisher'}
     },
     {
         day: 'Środa', type: 'Boks', icon: '🥊',
@@ -44,7 +44,7 @@ const PLAN = [
             {id: 'triceps', name: 'Triceps pushdown', sets: 3, reps: '12-15', weight: null, tag: 'isolation', notes: 'Łokcie przy tułowiu. Pełny wyprost.'},
             {id: 'pallof', name: 'Pallof press', sets: 3, reps: '10s/str', weight: null, tag: 'combat', notes: 'Antyrotacja = moc ciosów.'}
         ],
-        finisher: {name: 'Bike/bieżnia sprinty', detail: '6-8x20s / 40s rest (~7 min)', notes: 'Progresja: więcej rund lub krótszy rest.'}
+        finisher: {name: 'Bike/bieżnia sprinty', detail: '6-8x20s / 40s rest (~7 min)', notes: 'Progresja: więcej rund lub krótszy rest.', icon: '⚡', tag: 'finisher'}
     },
     {
         day: 'Piątek', type: 'Kickboxing', icon: '🦵',
@@ -85,15 +85,48 @@ function renderPlan() {
             <div class="day-header" onclick="toggleDay(this)">
                 <div class="day-name">${plan.icon} ${plan.day}</div>
                 <div class="day-type">${plan.type}</div>
-                <div class="day=chevron">></div>
+                <div class="day-chevron">></div>
             </div>
             <div class="day-body">
+                <div class="day-note">${plan.note}</div>
                 ${plan.exercises.map(ex => `
                     <div class="exercise-item">
-                        <div class="exercise-name">${ex.name}</div>
-                        <div class="exercise-detail">${ex.sets}x${ex.reps}</div>
+                        <div class="exercise-top">
+                            <div class="exercise-name">${ex.name}</div>
+                            <div class="exercise-tag ${ex.tag}">${ex.tag}</div>
+                        </div>
+                        <div class="exercise-stats">
+                            <div>
+                                <div class="exercise-detail label">Serie</div>
+                                <div class="exercise-detail">${ex.sets}x${ex.reps}</div>
+                            </div>
+                            <div>
+                                <div class="exercise-detail label">Ciężar</div>
+                                <div class="exercise-detail">${ex.weight == null ? "Dobierz" : ex.weight}</div>
+                            </div>
+                        </div>
+                        <div class="exercise-notes">
+                            ${ex.notes}
+                        </div>
                     </div>
                 `).join('')}
+                ${plan.finisher == null ? `` : `
+                   <div class="exercise-item">
+                        <div class="exercise-top">
+                            <div class="exercise-name">${plan.finisher.name}</div>
+                            <div class="exercise-tag ${plan.finisher.tag}">${plan.finisher.tag}</div>
+                        </div>
+                        <div class="exercise-stats">
+                            <div>
+                                <div class="exercise-detail label">Protokół</div>
+                                <div class="exercise-detail">${plan.finisher.detail}</div>
+                            </div>
+                        </div>
+                        <div class="exercise-notes">
+                            ${plan.finisher.notes}
+                        </div>
+                   </div>
+                    `}
             </div>
         </div>
         `;

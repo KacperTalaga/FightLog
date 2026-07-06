@@ -20,6 +20,9 @@ header span{
     --text-dim: #888;
     --accent: #4FC3F7;
     --combat: #C62828;
+    --compound: #1565C0;
+    --isolation: #6A1B9A;
+    --finisher: #FF6F00;
 }
 header{
     position: fixed;
@@ -83,6 +86,11 @@ main{
     min-height: 52px;
 }
 
+.day-note{
+    font-size: 12px;
+    color: var(--text-dim);
+}
+
 .day-name {
     font-size: 14px;
     font-weight: 700;
@@ -111,6 +119,12 @@ main{
     display: block;
 }
 
+.exercise-top{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
 .exercise-item {
     padding: 8px 0;
     border-bottom: 1px solid #1a1a1a;
@@ -119,11 +133,63 @@ main{
     border-bottom: none;
 }
 .exercise-name {
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 600;
 }
+
+.exercise-stats{
+    display: flex;
+    gap: 16px;
+    margin-bottom: 6px;
+
+}
+
 .exercise-detail {
+    font-size: 14px;
+    color: var(--text);
+    margin-top: 3px;
+    font-weight: 600;
+}
+
+.exercise-detail.label{
+    font-size: 10px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.combat{
+    background: var(--combat);
+    color: #fff;
+}
+
+.compound{
+    background: var(--compound);
+    color: #fff;
+}
+
+.isolation{
+    background: var(--isolation);
+    color: #fff;
+}
+
+.finisher{
+    background: var(--finisher);
+    color: #fff;
+}
+
+.exercise-tag{
+    font-size: 12px;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-weight: 700;
+    letter-spacing: 0.5;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.exercise-notes{
     font-size: 12px;
     color: var(--text-dim);
-    margin-top: 3px;
+    line-height: 1.5;
 }
