@@ -1,6 +1,30 @@
 function $(sel) { return document.querySelector(sel); }
 function $$(sel) { return [...document.querySelectorAll(sel)]; }
 
+const SESJA = {
+    date: '2026-07-07',
+    day: 'Wtorek',
+    type: 'Pull + Nogi',
+    notes: '',
+    exercises: [
+        {id: 'leg-press', sets: [
+            {base_weight: 100, reps: 8, dropset: null},
+            {base_weight: 100, reps: 8, dropset: null},
+            {base_weight: 100, reps: 8, dropset: {weight: 80, reps: 4}},
+        ]},
+    ]
+}
+
+const SESJA_Combat = {
+    date: '2026-07-06',
+    day: 'Poniedziałek',
+    type: 'Boks',
+    notes: '',
+    rating: 5, // 0-10
+}
+
+// localStorage.setItem('log-2026-07-06', JSON.stringify(SESJA_Combat));
+
 const PLAN = [
     {
         day: 'Poniedziałek', type: 'Boks', icon: '🥊',
@@ -16,7 +40,7 @@ const PLAN = [
         exercises: [
             {id: 'pullup', name: 'Podciąganie', sets: 4, reps: '6-10', weight: 'BW', tag: 'compound', notes: 'Gdy 4x10 → dodaj +5 kg. Pełny zakres.'},
             {id: 'db-row', name: 'Wiosłowanie hantlem', sets: 3, reps: '8-12/str', weight: 22, tag: 'compound', notes: 'Łopatka: ściągnij na dole, kontroluj powrót.'},
-            {id: 'leg-press', name: 'Prasa nożna', sets: 3, reps: '10-15', weight: 100, tag: 'compound', notes: 'Stopy wysoko i szeroko. Kolana nie blokuj.'},
+            {id: 'leg-press', name: 'Leg press', sets: 3, reps: '10-15', weight: 100, tag: 'compound', notes: 'Stopy wysoko i szeroko. Kolana nie blokuj.'},
             {id: 'leg-curl', name: 'Leg curl', sets: 3, reps: '12-15', weight: null, tag: 'isolation', notes: 'Prewencja kontuzji kolana. 2s excentric.'},
             {id: 'db-curl', name: 'Curl hantlami', sets: 3, reps: '8-10/r', weight: '18-20', tag: 'isolation', notes: 'Stojąc, na zmianę. Bez kiwania.'},
             {id: 'face-pull', name: 'Face pull', sets: 3, reps: '15-20', weight: null, tag: 'isolation', notes: 'Łokcie wysoko, ściśnij łopatki 1s.'}
@@ -131,6 +155,43 @@ function renderPlan() {
         </div>
         `;
     }).join('');
+}
+
+function renderLog() {
+    const today = (new Date().getDay() + 6 ) % 7; // poniedzialek - 0
+    const plan_day = PLAN[today];
+    const container = $('#view-log');
+    if (plan_day.isCombat) {
+        container.innerHTML = `
+        <div>
+            <form>
+                <label>Prosty Formularz</label>
+                <input />
+            </form>
+        </div>
+        `;
+    } else{
+        container.innerHTML = `
+            <div>
+                <form>
+                    ${plan_day.exercises.map(ex => `
+                        <div>
+                            <div>${ex.name}</div>
+                            <div>
+                                <label>Ciężar</label>
+                                <input />
+                                ${Array(ex.sets).fill(null).map((set, index) => `
+                                    <label>Seria ${index}</label>
+                                    <input data-id="${ex.id}" data-set="${index}" />
+                                    `).join('')}
+                            </div>
+                        </div>
+                        `).join('')}
+                </form>
+            </div>
+            `
+    }
+
 }
 
 function toggleDay(headerEl){
