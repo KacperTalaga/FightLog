@@ -1,26 +1,48 @@
 <!DOCTYPE html>
-<html lang="pl">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#0a0a0a">
     <title>FightLog</title>
-    <link rel="stylesheet" href="./style.css">
-    <script src="script.js" defer></script>
 </head>
 <body>
-    <header>FIGHT<span>LOG</span></header>
-    <main>
-        <div id="view-plan" class="view active">
+	<p>Ćwiczenie</p>
+	<form>
+		<label for="weight">Weight:</label><br>
+		<input type="number" id="weight" name="weight" class="exercise-form"><br>
+		<label for="reps">Reps:</label><br>
+		<input type="number" id="reps" name="reps" class="exercise-form"><br>
+		<input type="submit" value="Submit" id="submit">
+	</form>
+	
+<script>
+var inputs = document.getElementsByClassName("exercise-form"); //collection
+var submit = document.getElementById("submit");
+var sesje = []; //array
 
-        </div>
-        <div id="view-log" class="view">
+const form = document.querySelector('form');
+form.addEventListener('submit', function(event) {
+	event.preventDefault(); // Zatrzymuje przeładowanie strony
+});
 
-        </div>
-    </main>
-    <nav>
-        <button data-view="plan" class="active">Plan</button>
-        <button data-view="log">Log</button>
-    </nav>
+submit.addEventListener("click", function () {
+	var data = new Date();
+	data = data.toLocaleDateString('pl-PL');
+	var sesja = {date: data, type: 'gym', exercises: []};
+	var exercises_list = [{id: 1, name: 'leg-press', sets: []}];
+	var set = {};
+	for (let i = 0; i < inputs.length; i++) {
+		var value = Number(inputs[i].value.trim());
+		console.log("value: ", value);
+		set[inputs[i].id] = value;
+		inputs[i].value = "";
+	}
+	console.log("set", set);
+	exercises_list[0].sets.push(set);
+	sesja.exercises.push(exercises_list);
+	sesje.push(sesja);
+	console.log(sesje);
+});
+
+</script>
+	
 </body>
 </html>
