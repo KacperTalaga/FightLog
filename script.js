@@ -43,7 +43,10 @@ const PLAN = [
             {id: 'leg-press', name: 'Leg press', sets: 3, reps: '10-15', weight: 100, tag: 'compound', notes: 'Stopy wysoko i szeroko. Kolana nie blokuj.'},
             {id: 'leg-curl', name: 'Leg curl', sets: 3, reps: '12-15', weight: null, tag: 'isolation', notes: 'Prewencja kontuzji kolana. 2s excentric.'},
             {id: 'db-curl', name: 'Curl hantlami', sets: 3, reps: '8-10/r', weight: '18-20', tag: 'isolation', notes: 'Stojąc, na zmianę. Bez kiwania.'},
-            {id: 'face-pull', name: 'Face pull', sets: 3, reps: '15-20', weight: null, tag: 'isolation', notes: 'Łokcie wysoko, ściśnij łopatki 1s.'}
+            {id: 'face-pull', name: 'Face pull', sets: 3, reps: '15-20', weight: null, tag: 'isolation', notes: 'Łokcie wysoko, ściśnij łopatki 1s.'},
+            {id: 'incline-curl', name: 'Incline DB Curls', sets: 2, reps:'12-15', weight: '10', tag:'isolation', notes: 'Ławka skośna'},
+            {id: 'hanging-knee-raise', name: 'hanging knee raise', sets: 2, reps:'15-20', weight: 'BW', tag:'isolation', notes: 'ABS'}
+            
         ],
         finisher: {name: 'Skakanka HIIT', detail: '5x1min / 30s rest (~8 min)', notes: 'Progresja: skracaj rest 30s→20s→15s co 2 tyg.', icon: '⚡', tag: 'finisher'}
     },
@@ -66,7 +69,8 @@ const PLAN = [
             {id: 'pec-deck', name: 'Rozpiętki (pec deck)', sets: 3, reps: '12-15', weight: null, tag: 'isolation', notes: 'Pełne rozciągnięcie + skurcz 1s.'},
             {id: 'lat-raise', name: 'Lateral raise', sets: 3, reps: '12-15', weight: 9, tag: 'isolation', notes: 'Do poziomu barków, lekki pochył.'},
             {id: 'triceps', name: 'Triceps pushdown', sets: 3, reps: '12-15', weight: null, tag: 'isolation', notes: 'Łokcie przy tułowiu. Pełny wyprost.'},
-            {id: 'pallof', name: 'Pallof press', sets: 3, reps: '10s/str', weight: null, tag: 'combat', notes: 'Antyrotacja = moc ciosów.'}
+            {id: 'pallof', name: 'Pallof press', sets: 3, reps: '10s/str', weight: null, tag: 'combat', notes: 'Antyrotacja = moc ciosów.'},
+            {id: 'overhead-triceps-ext', name: 'Overhead triceps extension', sets: 2, reps: '12-15', weight: 35, tag: 'isolation', notes: 'linka lub hantla'},
         ],
         finisher: {name: 'Bike/bieżnia sprinty', detail: '6-8x20s / 40s rest (~7 min)', notes: 'Progresja: więcej rund lub krótszy rest.', icon: '⚡', tag: 'finisher'}
     },
@@ -88,7 +92,9 @@ const PLAN = [
             {id: 'leg-ext', name: 'Leg extension', sets: 3, reps: '12-15', weight: 50, tag: 'isolation', notes: 'Szczytowy skurcz 1s. Kontrolowany excentric.'},
             {id: 'rear-delt', name: 'Rear delt maszyna', sets: 3, reps: '15', weight: null, tag: 'isolation', notes: 'Ściśnij łopatki na końcu.'},
             {id: 'hammer-curl', name: 'Curl młotkowy', sets: 3, reps: '10-12', weight: '14-16', tag: 'isolation', notes: 'Brachialis + przedramiona = grip w rękawicach.'},
-            {id: 'calf-raise', name: 'Calf raise', sets: 3, reps: '15-20', weight: null, tag: 'isolation', notes: 'Footwork w ringu. Pełen zakres.'}
+            {id: 'calf-raise', name: 'Calf raise', sets: 3, reps: '15-20', weight: null, tag: 'isolation', notes: 'Footwork w ringu. Pełen zakres.'},
+            {id: 'triceps-cable-ext', name: 'Cable crossover', sets: 2, reps: '12-15', weight: null, tag: 'isolation', notes: 'Dobierz wagę.'},
+            {id: 'cable-crunch', name: 'Cable crunch', sets: 2, reps:'15-20', weight: 'BW', tag:'isolation', notes: 'ABS - maszyna/linka'}
         ],
         finisher: null
     },
