@@ -1,30 +1,3 @@
-function $(sel) { return document.querySelector(sel); }
-function $$(sel) { return [...document.querySelectorAll(sel)]; }
-
-const SESJA = {
-    date: '2026-07-07',
-    day: 'Wtorek',
-    type: 'Pull + Nogi',
-    notes: '',
-    exercises: [
-        {id: 'leg-press', sets: [
-            {base_weight: 100, reps: 8, dropset: null},
-            {base_weight: 100, reps: 8, dropset: null},
-            {base_weight: 100, reps: 8, dropset: {weight: 80, reps: 4}},
-        ]},
-    ]
-}
-
-const SESJA_Combat = {
-    date: '2026-07-06',
-    day: 'Poniedziałek',
-    type: 'Boks',
-    notes: '',
-    rating: 5, // 0-10
-}
-
-// localStorage.setItem('log-2026-07-06', JSON.stringify(SESJA_Combat));
-
 const PLAN = [
     {
         day: 'Poniedziałek', type: 'Boks', icon: '🥊',
@@ -107,116 +80,74 @@ const PLAN = [
     }
 ];
 
-function renderPlan() {
-    const container = $('#view-plan');
-    container.innerHTML = PLAN.map((plan, index) => {
-        return `
-        <div class="day-card">
-            <div class="day-header" onclick="toggleDay(this)">
-                <div class="day-name">${plan.icon} ${plan.day}</div>
-                <div class="day-type">${plan.type}</div>
-                <div class="day-chevron">></div>
-            </div>
-            <div class="day-body">
-                <div class="day-note">${plan.note}</div>
-                ${plan.exercises.map(ex => `
-                    <div class="exercise-item">
-                        <div class="exercise-top">
-                            <div class="exercise-name">${ex.name}</div>
-                            <div class="exercise-tag ${ex.tag}">${ex.tag}</div>
-                        </div>
-                        <div class="exercise-stats">
-                            <div>
-                                <div class="exercise-detail label">Serie</div>
-                                <div class="exercise-detail">${ex.sets}x${ex.reps}</div>
-                            </div>
-                            <div>
-                                <div class="exercise-detail label">Ciężar</div>
-                                <div class="exercise-detail">${ex.weight == null ? "Dobierz" : ex.weight}</div>
-                            </div>
-                        </div>
-                        <div class="exercise-notes">
-                            ${ex.notes}
-                        </div>
-                    </div>
-                `).join('')}
-                ${plan.finisher == null ? `` : `
-                   <div class="exercise-item">
-                        <div class="exercise-top">
-                            <div class="exercise-name">${plan.finisher.name}</div>
-                            <div class="exercise-tag ${plan.finisher.tag}">${plan.finisher.tag}</div>
-                        </div>
-                        <div class="exercise-stats">
-                            <div>
-                                <div class="exercise-detail label">Protokół</div>
-                                <div class="exercise-detail">${plan.finisher.detail}</div>
-                            </div>
-                        </div>
-                        <div class="exercise-notes">
-                            ${plan.finisher.notes}
-                        </div>
-                   </div>
-                    `}
-            </div>
-        </div>
-        `;
-    }).join('');
+var inputs = document.getElementsByClassName("exercise-form"); //collection
+var submit = document.getElementById("submit");
+var data = formatDate();
+var sesja = {date: data, type: 'gym', exercises: []};
+var exercise_obj = {id: 1, name: 'leg-press', sets: []};
+
+if (localStorage.getItem(`log-${formatDate()}`) != null) {
+	sesja = JSON.parse(localStorage.getItem(`log-${formatDate()}`));
 }
 
-function renderLog() {
-    const today = (new Date().getDay() + 6 ) % 7; // poniedzialek - 0
-    const plan_day = PLAN[today];
-    const container = $('#view-log');
-    if (plan_day.isCombat) {
-        container.innerHTML = `
-        <div>
-            <form>
-                <label>Prosty Formularz</label>
-                <input />
-            </form>
-        </div>
-        `;
-    } else{
-        container.innerHTML = `
-            <div>
-                <form>
-                    ${plan_day.exercises.map(ex => `
-                        <div>
-                            <div>${ex.name}</div>
-                            <div>
-                                <label>Ciężar</label>
-                                <input />
-                                ${Array(ex.sets).fill(null).map((set, index) => `
-                                    <label>Seria ${index}</label>
-                                    <input data-id="${ex.id}" data-set="${index}" />
-                                    `).join('')}
-                            </div>
-                        </div>
-                        `).join('')}
-                </form>
-            </div>
-            `
-    }
-
-}
-
-function toggleDay(headerEl){
-    headerEl.closest('.day-card').classList.toggle('open');
-}
-
-function switchView(viewName){
-    const buttons = $$('nav button');
-    buttons.forEach(element => {
-        element.classList.toggle('active', element.dataset.view === viewName);
-    });
-    const divs = $$('.view');
-    divs.forEach(element => {
-        element.classList.toggle('active', element.id === 'view-' + viewName);
-    });
-}
-
-$$('nav button').forEach(btn => {
-    btn.addEventListener('click', () => switchView(btn.dataset.view));
+const form = document.querySelector('form');
+form.addEventListener('submit', function(event) {
+	event.preventDefault(); // Zatrzymuje przeładowanie strony
 });
 
-renderPlan();
+submit.addEventListener("click", function () {
+	var znalezione_cwiczenie = sesja.exercises.find(exe_obj => exe_obj.id === 1);
+	if (znalezione_cwiczenie != null) {
+		znalezione_cwiczenie.sets.push(...exercise_obj.sets); // rozpakowanie
+	} else {
+		sesja.exercises.push(exercise_obj);
+	}
+	var sesjaJSON = JSON.stringify(sesja);
+	localStorage.setItem(`log-${formatDate()}`, sesjaJSON);
+	console.log("Zapisano sesjaJSOn do localStorage");
+	exercise_obj = {id: 1, name: 'leg-press', sets: []};
+});
+
+function openTab(event, tabName) {
+	let btns = document.querySelectorAll(".tab-btn");
+	let tabs = document.querySelectorAll(".tab");
+	// Najpierw usuwamy ze wszystkich active, żeby później dać active na to kliknięte
+	btns.forEach(btn => btn.classList.remove("active"));
+	tabs.forEach(tab => tab.classList.remove("active"));
+	
+	// to jest działanie podczas onClick w buttonie.
+	document.getElementById(tabName).classList.add("active");
+	// i Teraz dodajemy do przycisku active
+	event.currentTarget.classList.add("active");
+}
+
+// Dzień w zakładce gym
+var date = new Date();
+document.getElementById("date").innerHTML = formatDate();
+// // wtorek, 14 lipca
+// const dzien = date.toLocaleDateString('pl-PL', {weekday: 'long', day: 'numeric', month: 'long'});
+const dzien = date.toLocaleDateString('pl-PL', {weekday: 'long'});
+document.getElementById('day').innerHTML = dzien;
+
+function addSet() {
+	var set = {}
+	for (let i = 0; i < inputs.length; i++) {
+		var value = Number(inputs[i].value.trim());
+		set[inputs[i].id] = value;
+		inputs[i].value = "";
+	}
+	exercise_obj.sets.push(set);
+}
+
+function formatDate() {
+	var date = new Date();
+	const isoDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+	return isoDate;
+}
+
+function dropset() {
+    var dropsets = document.querySelectorAll(".exercise-form-dropset");
+    for (let i = 0; i < dropsets.length; i++){
+        dropsets[i].classList.toggle("visible");
+    }
+}

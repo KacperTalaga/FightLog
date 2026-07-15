@@ -2,18 +2,8 @@
 <html>
 <head>
     <title>FightLog</title>
-	<style>
-		.tab {
-			display: none;
-		}
-		.active {
-			display: block;
-			/* Cała szerokość rodzica, new line, */
-		}
-		.tab-navigation{
-			display: flex;
-		}
-	</style>
+	<link rel="stylesheet" href="./style.css">
+    <script src="script.js" defer></script>
 </head>
 <body>
 	<div id="tabs" class="tab-navigation">
@@ -32,6 +22,14 @@
 			<input type="number" id="weight" name="weight" class="exercise-form"><br>
 			<label for="reps">Reps:</label><br>
 			<input type="number" id="reps" name="reps" class="exercise-form"><br>
+			<button type="button" id="dropset-btn" onClick="dropset()">Dropset</button><br>
+					<label for="weight-dropset" class="exercise-form-dropset">Weight:</label>
+					<br class="exercise-form-dropset">
+					<input type="number" id="weight-dropset" name="weight-dropset" class="exercise-form-dropset">
+					<br class="exercise-form-dropset">
+					<label for="reps-dropset" class="exercise-form-dropset">Reps:</label>
+					<br class="exercise-form-dropset">
+					<input type="number" id="reps-dropset" name="reps-dropset" class="exercise-form-dropset">
 			<button type="button" id="add" onClick='addSet()'>Dodaj serię</button><br>
 			<input type="submit" value="Zapisz sesję" id="submit">
 		</form>
@@ -39,74 +37,5 @@
 	<div id="tab-combat" class="tab combat">
 		<p>Combat tutaj jest</p>
 	</div>
-	
-<script>
-var inputs = document.getElementsByClassName("exercise-form"); //collection
-var submit = document.getElementById("submit");
-var data = formatDate();
-var sesja = {date: data, type: 'gym', exercises: []};
-var exercise_obj = {id: 1, name: 'leg-press', sets: []};
-
-if (localStorage.getItem(`log-${formatDate()}`) != null) {
-	sesja = JSON.parse(localStorage.getItem(`log-${formatDate()}`));
-}
-
-const form = document.querySelector('form');
-form.addEventListener('submit', function(event) {
-	event.preventDefault(); // Zatrzymuje przeładowanie strony
-});
-
-submit.addEventListener("click", function () {
-	var znalezione_cwiczenie = sesja.exercises.find(exe_obj => exe_obj.id === 1);
-	if (znalezione_cwiczenie != null) {
-		znalezione_cwiczenie.sets.push(...exercise_obj.sets); // rozpakowanie
-	} else {
-		sesja.exercises.push(exercise_obj);
-	}
-	var sesjaJSON = JSON.stringify(sesja);
-	localStorage.setItem(`log-${formatDate()}`, sesjaJSON);
-	console.log("Zapisano sesjaJSOn do localStorage");
-	exercise_obj = {id: 1, name: 'leg-press', sets: []};
-});
-
-function openTab(event, tabName) {
-	let btns = document.querySelectorAll(".tab-btn");
-	let tabs = document.querySelectorAll(".tab");
-	// Najpierw usuwamy ze wszystkich active, żeby później dać active na to kliknięte
-	btns.forEach(btn => btn.classList.remove("active"));
-	tabs.forEach(tab => tab.classList.remove("active"));
-	
-	// to jest działanie podczas onClick w buttonie.
-	document.getElementById(tabName).classList.add("active");
-	// i Teraz dodajemy do przycisku active
-	event.currentTarget.classList.add("active");
-}
-
-// Dzień w zakładce gym
-var date = new Date();
-document.getElementById("date").innerHTML = formatDate();
-// // wtorek, 14 lipca
-// const dzien = date.toLocaleDateString('pl-PL', {weekday: 'long', day: 'numeric', month: 'long'});
-const dzien = date.toLocaleDateString('pl-PL', {weekday: 'long'});
-document.getElementById('day').innerHTML = dzien;
-
-function addSet() {
-	var set = {}
-	for (let i = 0; i < inputs.length; i++) {
-		var value = Number(inputs[i].value.trim());
-		set[inputs[i].id] = value;
-		inputs[i].value = "";
-	}
-	exercise_obj.sets.push(set);
-}
-
-function formatDate() {
-	var date = new Date();
-	const isoDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-	return isoDate;
-}
-
-</script>
-	
 </body>
 </html>
