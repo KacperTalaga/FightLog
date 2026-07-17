@@ -85,9 +85,19 @@ var submit = document.getElementById("submit");
 var data = formatDate();
 var sesja = {date: data, type: 'gym', exercises: []};
 var exercise_obj = {id: 1, name: 'leg-press', sets: []};
+var date = new Date();
 
 if (localStorage.getItem(`log-${formatDate()}`) != null) {
 	sesja = JSON.parse(localStorage.getItem(`log-${formatDate()}`));
+} else {
+    // dzisiejszy dzień do planu
+    let todayIndex = (date.getDay() + 6 ) % 7 + 1;
+    let cwiczenia_na_dzisiaj = PLAN[todayIndex];
+    console.log(cwiczenia_na_dzisiaj);
+
+    sesja.exercises = cwiczenia_na_dzisiaj.exercises.map(cwiczenie => ({id: cwiczenie.id, name: cwiczenie.name, sets: []}))
+
+    console.log(sesja);
 }
 
 const form = document.querySelector('form');
@@ -122,21 +132,34 @@ function openTab(event, tabName) {
 }
 
 // Dzień w zakładce gym
-var date = new Date();
+
 document.getElementById("date").innerHTML = formatDate();
 // // wtorek, 14 lipca
 // const dzien = date.toLocaleDateString('pl-PL', {weekday: 'long', day: 'numeric', month: 'long'});
 const dzien = date.toLocaleDateString('pl-PL', {weekday: 'long'});
 document.getElementById('day').innerHTML = dzien;
 
-function addSet() {
-	var set = {}
-	for (let i = 0; i < inputs.length; i++) {
-		var value = Number(inputs[i].value.trim());
-		set[inputs[i].id] = value;
-		inputs[i].value = "";
-	}
-	exercise_obj.sets.push(set);
+function addSet(button) {
+
+    console.log("WYWOŁANO ADDSET()");
+
+    let div_sekcji = button.closest('[data-exercise-id]');
+    console.log(div_sekcji.dataset.exerciseId);
+    const id_cwiczenia = div_sekcji.dataset.exerciseId;
+
+    const inputy_sekcji = div_sekcji.querySelectorAll('[data-field]');
+    const set = {};
+    for (const input of inputy_sekcji) {
+        // set["nazwa"] = wartosc
+        set[input.dataset.field] = Number(input.value.trim());
+        // wyczyść pole
+        input.value = "";
+    }
+    console.log(set);
+    // znajdujemy obiekt sesja_exercises i wpychamy tam set do sets.
+    let znaleziony = sesja.exercises.find(exercise => exercise.id === id_cwiczenia);
+    znaleziony.sets.push(set);
+    console.log(znaleziony);
 }
 
 function formatDate() {
@@ -151,3 +174,39 @@ function dropset() {
         dropsets[i].classList.toggle("visible");
     }
 }
+
+// Kreator sekcji do logów
+// TODO: przy funkcji, wyczyścić na początku innerHTML - żeby uniknąć podwójnego stworzenia.
+sesja.exercises.forEach(elem => {
+    // tworzenie diva
+    const div_cwiczenia = document.createElement("div");
+    div_cwiczenia.dataset.exerciseId = elem.id;
+    const naglowek = document.createElement("p");
+    naglowek.textContent = elem.name;
+    const dodaj_serie_btn = document.createElement("button");
+    dodaj_serie_btn.textContent = "dodaj serię";
+    
+    // inputy
+    const label_weight = document.createElement("label");
+    label_weight.textContent = "Weight: ";
+    const input_weight = document.createElement("input");
+    input_weight.type = "number";
+    input_weight.dataset.field = "weight";
+    label_weight.appendChild(input_weight);
+
+    const label_reps = document.createElement("label");
+    label_reps.textContent = " Reps: ";
+    const input_reps = document.createElement("input");
+    input_reps.type = "number";
+    input_reps.dataset.field = "reps";
+    label_reps.appendChild(input_reps);
+
+    // listener do addSet()
+    dodaj_serie_btn.addEventListener("click", (event) => {
+        addSet(event.currentTarget);
+    })
+
+    // dodanie do DOM
+    div_cwiczenia.append(naglowek, label_weight, label_reps, dodaj_serie_btn);
+    document.getElementById("tab-gym-dynamicznie").appendChild(div_cwiczenia);
+});
