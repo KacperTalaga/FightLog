@@ -35,8 +35,13 @@ Aplikacja **działa w pełni bez logowania**, na samym `localStorage`. Logowanie
 włącza wyłącznie synchronizację telefon ↔ komputer.
 
 1. [Firebase Console](https://console.firebase.google.com) → **Add project**.
-2. **Build → Firestore Database → Create database** → tryb produkcyjny, region
-   `eur3` (europe-west).
+2. **Build → Firestore Database → Create database** → **Firestore in Native Mode**
+   (nie „with MongoDB compatibility" — ten wariant nie ma Security Rules i nie
+   rozmawia z webowym SDK; wyboru nie da się później zmienić), tryb produkcyjny,
+   region `eur3` (europe-west).
+
+   Jeśli baza nie nazywa się `(default)`, wpisz jej nazwę w
+   `FIRESTORE_DATABASE_ID` w [`js/firebase/config.js`](js/firebase/config.js).
 3. **Build → Authentication → Get started → Sign-in method → Google → Enable**.
    Ustaw e-mail wsparcia i zapisz.
 4. **Project settings → Your apps → Web (`</>`)** → zarejestruj aplikację.

@@ -8,7 +8,7 @@
    Firebase ładujemy dynamicznym importem, a nie statycznym — dzięki temu przy
    pustej konfiguracji przeglądarka w ogóle nie odpytuje CDN. */
 
-import { firebaseConfig, FIREBASE_VERSION, isConfigured } from './firebase/config.js';
+import { firebaseConfig, FIREBASE_VERSION, FIRESTORE_DATABASE_ID, isConfigured } from './firebase/config.js';
 import * as store from './store.js';
 
 const CDN = `https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}`;
@@ -60,7 +60,7 @@ export async function initSync() {
        logowania sesji gubiłoby zapisy zamiast je kolejkować. */
     db = fb.initializeFirestore(app, {
         localCache: fb.persistentLocalCache({ tabManager: fb.persistentMultipleTabManager() })
-    });
+    }, FIRESTORE_DATABASE_ID);
 
     /* Logowanie przez redirect kończy się dopiero po powrocie na stronę. */
     try {
