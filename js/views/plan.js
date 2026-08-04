@@ -1,7 +1,8 @@
-/* Widok PLAN — rozwijalne karty dni tygodnia. */
+/* Widok PLAN — rozwijalne karty dni tygodnia z sugestią na dziś. */
 
 import { escapeHtml, planDayIndex } from '../utils.js';
-import { getPlan } from '../store.js';
+import { getPlan, getSessions, getLatestWeight } from '../store.js';
+import { suggestNext, isDeloadWeek, formatLast, formatSuggestion, DELOAD_FACTOR } from '../progression.js';
 
 const CHEVRON = `<svg class="day-card__chevron" viewBox="0 0 24 24" width="16" height="16" fill="none"
     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -13,12 +14,26 @@ export function mountPlan(container) {
 }
 
 function renderPlan() {
+    const plan = getPlan();
+    const sessions = getSessions();
+    const bodyweightKg = getLatestWeight();
     const todayIndex = planDayIndex();
-    const days = getPlan().days.map((day, index) => renderDay(day, index === todayIndex)).join('');
-    return `<h1 class="view__title">Plan tygodnia</h1>${days}`;
+
+    /* Sugestie liczymy raz dla całego renderu — ta sama historia dla wszystkich dni. */
+    const suggestFor = exercise => suggestNext(exercise, sessions, { bodyweightKg });
+
+    const banner = isDeloadWeek(sessions)
+        ? `<div class="banner">Tydzień deload — sugestie zbite do ${Math.round(DELOAD_FACTOR * 100)}% ciężaru. Ta sama struktura, mniej obciążenia.</div>`
+        : '';
+
+    const days = plan.days
+        .map((day, index) => renderDay(day, index === todayIndex, suggestFor, bodyweightKg))
+        .join('');
+
+    return `<h1 class="view__title">Plan tygodnia</h1>${banner}${days}`;
 }
 
-function renderDay(day, isToday) {
+function renderDay(day, isToday, suggestFor, bodyweightKg) {
     const classes = ['day-card'];
     if (isToday) classes.push('is-today', 'is-open');
 
@@ -35,7 +50,7 @@ function renderDay(day, isToday) {
         </button>
         <div class="day-card__body">
             <p class="day-card__note">${escapeHtml(day.note)}</p>
-            ${day.exercises.map(renderExercise).join('')}
+            ${day.exercises.map(exercise => renderExercise(exercise, suggestFor(exercise), bodyweightKg)).join('')}
             ${day.finisher ? renderFinisher(day.finisher) : ''}
         </div>
     </article>`;
@@ -50,15 +65,10 @@ export function formatVolume(exercise) {
     return `${exercise.sets} × ${range}${unit}${side}`;
 }
 
-/* „70 kg”, „BW”, „BW +5 kg”, „Dobierz” */
-export function formatStartWeight(exercise) {
-    if (exercise.bodyweight) {
-        return exercise.startWeight ? `BW +${exercise.startWeight} kg` : 'BW';
-    }
-    return exercise.startWeight == null ? 'Dobierz' : `${exercise.startWeight} kg`;
-}
+function renderExercise(exercise, suggestion, bodyweightKg) {
+    const last = formatLast(suggestion.last);
+    const suggestionClass = suggestion.source === 'progress' ? ' exercise__value--up' : '';
 
-function renderExercise(exercise) {
     return `
     <div class="exercise" data-exercise-id="${escapeHtml(exercise.id)}">
         <div class="exercise__top">
@@ -71,14 +81,16 @@ function renderExercise(exercise) {
                 <div class="exercise__value">${formatVolume(exercise)}</div>
             </div>
             <div>
-                <div class="exercise__label">Ciężar</div>
-                <div class="exercise__value">${formatStartWeight(exercise)}</div>
+                <div class="exercise__label">Na dziś</div>
+                <div class="exercise__value${suggestionClass}">${formatSuggestion(suggestion, exercise, bodyweightKg)}</div>
             </div>
             <div>
                 <div class="exercise__label">Przyrost</div>
                 <div class="exercise__value">+${exercise.increment} kg</div>
             </div>
         </div>
+        <p class="exercise__micro">${last ? `ostatnio: ${last}` : 'brak historii — start z planu'}</p>
+        ${suggestion.stagnant ? '<p class="hint">Stagnacja: 3 sesje na tym samym ciężarze. Rozważ deload 55%.</p>' : ''}
         <p class="exercise__note">${escapeHtml(exercise.technique)}</p>
     </div>`;
 }

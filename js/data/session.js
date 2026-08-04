@@ -5,6 +5,7 @@
    serię poza kolejnością — indeks w DOM przestaje wtedy zgadzać się z danymi. */
 
 import { dateKey } from '../utils.js';
+import { baseWeight } from './plan.js';
 
 export const SESSION_TYPES = { STRENGTH: 'strength', COMBAT: 'combat' };
 
@@ -17,18 +18,12 @@ export function nextSessionId(date, existingIds = []) {
     return `${date}_${suffix}`;
 }
 
-/* Ciężar startowy do wyświetlenia w logu. Przy ćwiczeniach z masy ciała
-   zapisujemy realną liczbę (masa ciała + ewentualne obciążenie), bo pola
-   weight/reps trafiają potem do wzoru na 1RM i muszą być liczbami. */
-function plannedWeightFor(exercise, bodyweightKg) {
-    if (!exercise.bodyweight) return exercise.startWeight;
-    if (bodyweightKg == null) return null;
-    return Math.round((bodyweightKg + (exercise.startWeight ?? 0)) * 10) / 10;
-}
-
-function buildSets(exercise, bodyweightKg) {
-    const plannedWeight = plannedWeightFor(exercise, bodyweightKg);
-    const plannedReps = exercise.repRange[0];
+/* Wartości planowane biorą się z silnika progresji, jeśli został podany.
+   Bez niego (albo bez historii) spadamy na ciężar startowy z planu. */
+function buildSets(exercise, bodyweightKg, suggest) {
+    const suggestion = suggest ? suggest(exercise) : null;
+    const plannedWeight = suggestion ? suggestion.weight : baseWeight(exercise, bodyweightKg);
+    const plannedReps = suggestion ? suggestion.reps : exercise.repRange[0];
 
     /* Array.from z funkcją, a nie fill(obiekt) — fill wstawiłby wszędzie
        tę samą referencję i wpisanie ciężaru w serii 1 zmieniłoby wszystkie. */
@@ -43,7 +38,7 @@ function buildSets(exercise, bodyweightKg) {
 }
 
 export function buildStrengthSession(day, options = {}) {
-    const { date = dateKey(), planVersion = 1, bodyweightKg = null, existingIds = [] } = options;
+    const { date = dateKey(), planVersion = 1, bodyweightKg = null, existingIds = [], suggest = null } = options;
     const now = Date.now();
 
     return {
@@ -63,7 +58,7 @@ export function buildStrengthSession(day, options = {}) {
             perSide: exercise.perSide,
             unit: exercise.unit,
             note: '',
-            sets: buildSets(exercise, bodyweightKg)
+            sets: buildSets(exercise, bodyweightKg, suggest)
         }))
     };
 }

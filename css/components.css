@@ -146,10 +146,45 @@
     font-variant-numeric: tabular-nums;
 }
 
+.exercise__value--up {
+    color: var(--success);
+}
+
+/* Mikro-info „ostatnio: 70 kg × 8” — kontekst pod sugestią. */
+.exercise__micro {
+    font-size: var(--fs-xs);
+    color: var(--text-dim);
+    font-variant-numeric: tabular-nums;
+    margin-bottom: var(--space-2);
+}
+
 .exercise__note {
     font-size: var(--fs-sm);
     color: var(--text-dim);
     line-height: 1.55;
+}
+
+/* ---------- Komunikaty ---------- */
+
+.banner {
+    background: var(--surface-2);
+    border-left: 3px solid var(--cardio);
+    border-radius: var(--radius-sm);
+    padding: var(--space-3);
+    margin-bottom: var(--space-4);
+    font-size: var(--fs-sm);
+    color: var(--text-dim);
+    line-height: 1.5;
+}
+
+.hint {
+    display: inline-block;
+    font-size: var(--fs-xs);
+    color: var(--cardio);
+    border: 1px solid var(--cardio);
+    border-radius: var(--radius-sm);
+    padding: 2px 7px;
+    margin-bottom: var(--space-2);
 }
 
 /* Finisher wyróżniony paskiem w kolorze cardio. */

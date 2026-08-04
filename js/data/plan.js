@@ -123,6 +123,15 @@ function normalizeDay(day) {
 
 export const PLAN = DAYS.map(normalizeDay);
 
+/* Ciężar bazowy ćwiczenia, gdy nie ma jeszcze historii.
+   Przy ćwiczeniach z masy ciała zwracamy realną liczbę (masa ciała + obciążenie),
+   bo weight/reps trafiają potem do wzoru na 1RM i muszą być liczbami. */
+export function baseWeight(exercise, bodyweightKg = null) {
+    if (!exercise.bodyweight) return exercise.startWeight;
+    if (bodyweightKg == null) return null;
+    return Math.round((bodyweightKg + (exercise.startWeight ?? 0)) * 10) / 10;
+}
+
 export function findExercise(plan, exerciseId) {
     for (const day of plan.days) {
         const exercise = day.exercises.find(item => item.id === exerciseId);

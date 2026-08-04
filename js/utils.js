@@ -18,6 +18,14 @@ export function dateKey(date = new Date()) {
     return `${year}-${month}-${day}`;
 }
 
+/* Odwrotność dateKey. new Date('2026-08-04') parsuje się jako UTC i w naszej
+   strefie wypada 4 sierpnia o 2:00 — przy porównaniach dni to wystarczy, żeby
+   pomylić się o dobę, więc składamy datę lokalnie. */
+export function parseDateKey(key) {
+    const [year, month, day] = key.split('-').map(Number);
+    return new Date(year, month - 1, day);
+}
+
 /* Indeks dnia w tablicy PLAN, która zaczyna się od poniedziałku.
    getDay() zwraca 0 dla niedzieli, stąd przesunięcie o 6. */
 export function planDayIndex(date = new Date()) {
