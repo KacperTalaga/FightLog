@@ -32,6 +32,16 @@ export function planDayIndex(date = new Date()) {
     return (date.getDay() + 6) % 7;
 }
 
+/* '72,5' → 72.5, puste → null. Przecinek, bo klawiatura numeryczna na iOS
+   podsuwa separator lokalny, a do 1RM potrzebujemy liczby, nie stringa. */
+export function parseNumber(value) {
+    const normalized = String(value).replace(',', '.').trim();
+    if (normalized === '') return null;
+
+    const parsed = Number.parseFloat(normalized);
+    return Number.isFinite(parsed) ? parsed : null;
+}
+
 /* Ucieczka znaków przed wstawieniem tekstu do szablonu HTML.
    Notatki i nazwy ćwiczeń są edytowalne przez użytkownika, więc nie mogą
    trafiać do innerHTML surowe. */

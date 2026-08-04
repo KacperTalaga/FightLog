@@ -10,7 +10,12 @@ const CHEVRON = `<svg class="day-card__chevron" viewBox="0 0 24 24" width="16" h
 
 export function mountPlan(container) {
     container.innerHTML = renderPlan();
+
+    /* Widok montujemy ponownie przy każdym wejściu w zakładkę, żeby sugestie
+       uwzględniały świeżo zapisaną sesję — listener wolno podpiąć tylko raz. */
+    if (container.dataset.mounted) return;
     container.addEventListener('click', handleDayToggle);
+    container.dataset.mounted = '1';
 }
 
 function renderPlan() {

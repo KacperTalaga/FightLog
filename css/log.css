@@ -1,0 +1,284 @@
+/* Widok LOG — pasek daty, karty ćwiczeń, wiersze serii, timer. */
+
+.log-bar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
+}
+
+.log-bar__date {
+    flex: 1;
+    min-height: var(--tap);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 0 var(--space-3);
+    /* 16 px, inaczej Safari na iOS zoomuje stronę przy wejściu w pole. */
+    font-size: 16px;
+}
+
+.log-bar__status {
+    font-size: var(--fs-xs);
+    color: var(--text-dim);
+    white-space: nowrap;
+}
+
+.session-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-3);
+}
+
+.session-head .view__title {
+    margin-bottom: var(--space-4);
+}
+
+/* ---------- Przyciski ---------- */
+
+.btn {
+    min-height: var(--tap);
+    padding: 0 var(--space-4);
+    background: var(--surface-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: var(--fs-sm);
+    font-weight: 600;
+    cursor: pointer;
+    transition: background var(--transition);
+}
+
+.btn--primary {
+    background: var(--compound);
+    border-color: var(--compound);
+}
+
+.btn--ghost {
+    background: none;
+    color: var(--text-dim);
+}
+
+.btn--small {
+    min-height: 36px;
+    padding: 0 var(--space-3);
+    font-size: var(--fs-xs);
+}
+
+.start-actions {
+    display: flex;
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+}
+
+.start-actions .btn {
+    flex: 1;
+}
+
+/* ---------- Chipy (dyscyplina, ocena, presety timera) ---------- */
+
+.chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+}
+
+.chip {
+    min-width: var(--tap);
+    min-height: 38px;
+    padding: 0 var(--space-3);
+    background: var(--surface-2);
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: var(--fs-sm);
+    font-weight: 600;
+    cursor: pointer;
+    transition: color var(--transition), border-color var(--transition);
+}
+
+.chip.is-active {
+    color: var(--text);
+    border-color: var(--text-dim);
+}
+
+/* ---------- Timer ---------- */
+
+.timer {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: var(--space-2) var(--space-3);
+    margin-bottom: var(--space-4);
+}
+
+.timer__display {
+    flex: 1;
+    font-size: var(--fs-lg);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-dim);
+}
+
+/* Wibracja nie działa w Safari na iOS, więc koniec odliczania musi być widać. */
+.timer__display.is-finished {
+    color: var(--success);
+}
+
+/* ---------- Karta ćwiczenia ---------- */
+
+.ex-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: var(--space-3) var(--space-4) var(--space-4);
+    margin-bottom: var(--space-2);
+}
+
+.ex-card__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    margin-bottom: var(--space-1);
+}
+
+.ex-card__foot {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+}
+
+/* ---------- Wiersz serii ---------- */
+
+.set {
+    border-top: 1px solid var(--border);
+    padding: var(--space-2) 0;
+}
+
+.set__main,
+.set__drop {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.set__drop {
+    margin-top: var(--space-2);
+    padding-left: var(--space-5);
+}
+
+.set__no {
+    width: 28px;
+    flex-shrink: 0;
+    font-size: var(--fs-xs);
+    font-weight: 700;
+    color: var(--text-dim);
+}
+
+.set__input {
+    flex: 1;
+    min-width: 0;
+    min-height: var(--tap);
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 0 var(--space-3);
+    /* 16 px — patrz .log-bar__date. */
+    font-size: 16px;
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+}
+
+.set__input:focus {
+    outline: none;
+    border-color: var(--text-dim);
+}
+
+.set__input::placeholder {
+    color: #555;
+}
+
+.set__x {
+    color: var(--text-dim);
+    font-size: var(--fs-sm);
+}
+
+.set__btn {
+    width: var(--tap);
+    height: var(--tap);
+    flex-shrink: 0;
+    background: var(--surface-2);
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: var(--fs-sm);
+    font-weight: 700;
+    cursor: pointer;
+    transition: color var(--transition), border-color var(--transition);
+}
+
+.set__btn.is-active {
+    color: var(--cardio);
+    border-color: var(--cardio);
+}
+
+.set.is-done .set__btn--done {
+    color: var(--success);
+    border-color: var(--success);
+}
+
+.set.is-done .set__input {
+    color: var(--text-dim);
+}
+
+.set.is-done {
+    box-shadow: inset 2px 0 0 var(--success);
+}
+
+/* ---------- Pola formularza ---------- */
+
+.field {
+    display: block;
+    margin-bottom: var(--space-4);
+}
+
+.field__label {
+    display: block;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+    margin-bottom: var(--space-2);
+}
+
+.field__input {
+    width: 100%;
+    min-height: var(--tap);
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: var(--space-2) var(--space-3);
+    /* 16 px — patrz .log-bar__date. */
+    font-size: 16px;
+    line-height: 1.5;
+    resize: vertical;
+}
+
+.field__input:focus {
+    outline: none;
+    border-color: var(--text-dim);
+}
+
+.field__input--inline {
+    flex: 1;
+    margin-bottom: 0;
+    font-size: 16px;
+}

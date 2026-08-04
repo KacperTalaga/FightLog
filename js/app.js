@@ -17,6 +17,10 @@ const VIEWS = {
 };
 
 function switchView(name) {
+    /* Przemontowanie widoku przy wejściu — dane mogły się zmienić w innej
+       zakładce (sesja zapisana w logu podnosi sugestie w planie). */
+    VIEWS[name]($(`#view-${name}`));
+
     $$('.tab-bar__btn').forEach(button => {
         button.classList.toggle('is-active', button.dataset.view === name);
         button.setAttribute('aria-current', button.dataset.view === name ? 'page' : 'false');
