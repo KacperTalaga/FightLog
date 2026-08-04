@@ -1,0 +1,132 @@
+/* Reset, szkielet strony, nagłówek i dolny tab bar. */
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    background: var(--bg);
+    /* Blokuje "gumowe" odbijanie strony przy scrollu w standalone na iOS. */
+    overscroll-behavior-y: none;
+}
+
+body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: var(--fs-md);
+    line-height: 1.5;
+    min-height: 100dvh;
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+}
+
+button,
+input,
+select,
+textarea {
+    font-family: inherit;
+    /* iOS zoomuje pole przy focusie poniżej 16 px — stąd sztywne 16 px na inputach. */
+    font-size: inherit;
+    color: inherit;
+}
+
+/* ---------- Nagłówek ---------- */
+
+.app-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: calc(var(--header-h) + env(safe-area-inset-top));
+    padding-top: env(safe-area-inset-top);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    z-index: 100;
+}
+
+.app-header__logo {
+    font-size: var(--fs-lg);
+    font-weight: 700;
+    letter-spacing: 1.5px;
+}
+
+.app-header__logo em {
+    font-style: normal;
+    color: var(--combat);
+}
+
+/* ---------- Treść ---------- */
+
+.app-main {
+    max-width: var(--content-max);
+    margin: 0 auto;
+    padding: calc(var(--header-h) + env(safe-area-inset-top) + var(--space-4))
+             var(--space-3)
+             calc(var(--tabbar-h) + env(safe-area-inset-bottom) + var(--space-5));
+}
+
+.view {
+    display: none;
+}
+
+.view.is-active {
+    display: block;
+}
+
+.view__title {
+    font-size: var(--fs-xl);
+    font-weight: 700;
+    letter-spacing: -0.3px;
+    margin-bottom: var(--space-4);
+}
+
+/* ---------- Dolna nawigacja ---------- */
+
+.tab-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    display: flex;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding-bottom: env(safe-area-inset-bottom);
+    z-index: 100;
+}
+
+.tab-bar__btn {
+    flex: 1;
+    min-height: var(--tap);
+    height: var(--tabbar-h);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #5a5a5a;
+    font-size: var(--fs-xs);
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    transition: color var(--transition);
+}
+
+.tab-bar__btn svg {
+    width: 21px;
+    height: 21px;
+    display: block;
+}
+
+.tab-bar__btn.is-active {
+    color: var(--text);
+}
