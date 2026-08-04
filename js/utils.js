@@ -56,6 +56,18 @@ export function parseNumber(value) {
     return Number.isFinite(parsed) ? parsed : null;
 }
 
+/* Tekst do porównań w wyszukiwarce: bez wielkości liter i bez ogonków,
+   żeby „objetosc” znajdowało „objętość”. */
+export function normalizeText(value) {
+    return String(value)
+        .toLowerCase()
+        /* NFD rozkłada ą, ć, ę, ń, ó, ś, ź, ż na literę + znak diakrytyczny,
+           ale „ł” jest osobną literą i nie ma czego rozłożyć — stąd wyjątek. */
+        .replace(/ł/g, 'l')
+        .normalize('NFD')
+        .replace(/\p{Diacritic}/gu, '');
+}
+
 /* Ucieczka znaków przed wstawieniem tekstu do szablonu HTML.
    Notatki i nazwy ćwiczeń są edytowalne przez użytkownika, więc nie mogą
    trafiać do innerHTML surowe. */

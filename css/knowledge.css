@@ -1,0 +1,93 @@
+/* Widok BAZA WIEDZY — akordeon i typografia treści. */
+
+#knowledge-search {
+    margin-bottom: var(--space-3);
+}
+
+.knowledge {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: var(--space-2);
+    overflow: hidden;
+}
+
+.knowledge__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    width: 100%;
+    min-height: var(--tap);
+    padding: var(--space-3) var(--space-4);
+    background: none;
+    border: none;
+    text-align: left;
+    cursor: pointer;
+}
+
+.knowledge__title {
+    font-size: var(--fs-md);
+    font-weight: 600;
+}
+
+.knowledge__chevron {
+    flex-shrink: 0;
+    color: var(--text-dim);
+    font-size: var(--fs-lg);
+    line-height: 1;
+    transition: transform var(--transition);
+}
+
+.knowledge.is-open .knowledge__chevron {
+    transform: rotate(45deg);
+}
+
+.knowledge__body {
+    display: none;
+    padding: 0 var(--space-4) var(--space-4);
+    font-size: var(--fs-sm);
+    color: var(--text-dim);
+    line-height: 1.65;
+}
+
+.knowledge.is-open .knowledge__body {
+    display: block;
+}
+
+.knowledge__body p {
+    margin-bottom: var(--space-3);
+}
+
+.knowledge__body p:last-child {
+    margin-bottom: 0;
+}
+
+.knowledge__body strong {
+    color: var(--text);
+}
+
+.knowledge__body em {
+    color: var(--text);
+    font-style: italic;
+}
+
+.knowledge__body ul,
+.knowledge__body ol {
+    margin: 0 0 var(--space-3) var(--space-4);
+}
+
+.knowledge__body li {
+    margin-bottom: var(--space-2);
+}
+
+.knowledge__body li:last-child {
+    margin-bottom: 0;
+}
+
+/* Adnotacja redakcyjna — wyraźnie oddzielona od treści merytorycznej. */
+.knowledge__note {
+    border-left: 2px solid var(--border);
+    padding-left: var(--space-3);
+    font-size: var(--fs-xs);
+}
