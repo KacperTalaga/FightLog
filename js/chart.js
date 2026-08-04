@@ -31,9 +31,23 @@ function formatValue(value) {
     return value >= 1000 ? `${Math.round(value / 100) / 10}k` : String(Math.round(value * 10) / 10);
 }
 
-function grid(scale, height) {
-    const { min, max } = scale;
-    const ticks = [min, (min + max) / 2, max];
+function makeScale(count, values, height) {
+    const innerWidth = WIDTH - PADDING.left - PADDING.right;
+    const innerHeight = height - PADDING.top - PADDING.bottom;
+    const { min, max } = domain(values);
+
+    return {
+        min,
+        max,
+        x: index => count === 1
+            ? PADDING.left + innerWidth / 2
+            : Math.round((PADDING.left + (index / (count - 1)) * innerWidth) * 10) / 10,
+        y: value => Math.round((PADDING.top + innerHeight - ((value - min) / (max - min)) * innerHeight) * 10) / 10
+    };
+}
+
+function grid(scale) {
+    const ticks = [scale.min, (scale.min + scale.max) / 2, scale.max];
 
     return ticks.map(value => {
         const y = scale.y(value);
@@ -44,54 +58,86 @@ function grid(scale, height) {
 
 /* Etykiety osi X: pierwsza, środkowa i ostatnia — więcej się nie mieści
    na szerokości telefonu. */
-function axisLabels(points, scale, height) {
-    const indexes = points.length > 2 ? [0, Math.floor(points.length / 2), points.length - 1] : points.map((_, i) => i);
+function axisLabels(labels, scale, height) {
+    const indexes = labels.length > 2 ? [0, Math.floor(labels.length / 2), labels.length - 1] : labels.map((_, i) => i);
     const y = height - 6;
 
     return [...new Set(indexes)].map(index => {
-        const anchor = index === 0 ? 'start' : index === points.length - 1 ? 'end' : 'middle';
-        return `<text class="chart__label" x="${scale.x(index)}" y="${y}" text-anchor="${anchor}">${shortDate(points[index].label)}</text>`;
+        const anchor = index === 0 ? 'start' : index === labels.length - 1 ? 'end' : 'middle';
+        return `<text class="chart__label" x="${scale.x(index)}" y="${y}" text-anchor="${anchor}">${shortDate(labels[index])}</text>`;
     }).join('');
-}
-
-function makeScale(points, height) {
-    const innerWidth = WIDTH - PADDING.left - PADDING.right;
-    const innerHeight = height - PADDING.top - PADDING.bottom;
-    const { min, max } = domain(points.map(point => point.value));
-
-    return {
-        min,
-        max,
-        x: index => points.length === 1
-            ? PADDING.left + innerWidth / 2
-            : Math.round((PADDING.left + (index / (points.length - 1)) * innerWidth) * 10) / 10,
-        y: value => Math.round((PADDING.top + innerHeight - ((value - min) / (max - min)) * innerHeight) * 10) / 10
-    };
 }
 
 function frame(height, body, title) {
     return `<svg class="chart" viewBox="0 0 ${WIDTH} ${height}" role="img" aria-label="${escapeHtml(title)}">${body}</svg>`;
 }
 
+function polyline(points, scale, color, dashed) {
+    const path = points.map((point, index) => `${index ? 'L' : 'M'}${scale.x(point.index)} ${scale.y(point.value)}`).join(' ');
+    return `<path d="${path}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round"
+        stroke-linecap="round"${dashed ? ' stroke-dasharray="5 4"' : ''}/>`;
+}
+
+/* ---------- Wykres liniowy ---------- */
+
 export function lineChart(points, { height = 190, color = 'var(--compound)', title = 'Wykres' } = {}) {
     if (!points.length) return empty('Brak danych — zapisz kilka sesji.');
 
-    const scale = makeScale(points, height);
-    const path = points.map((point, index) => `${index ? 'L' : 'M'}${scale.x(index)} ${scale.y(point.value)}`).join(' ');
-    const dots = points.map((point, index) =>
-        `<circle cx="${scale.x(index)}" cy="${scale.y(point.value)}" r="3" fill="${color}"/>`).join('');
+    const scale = makeScale(points.length, points.map(point => point.value), height);
+    const indexed = points.map((point, index) => ({ index, value: point.value }));
+    const dots = indexed.map(point =>
+        `<circle cx="${scale.x(point.index)}" cy="${scale.y(point.value)}" r="3" fill="${color}"/>`).join('');
 
     return frame(height, `
-        ${grid(scale, height)}
-        <path d="${path}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+        ${grid(scale)}
+        ${polyline(indexed, scale, color, false)}
         ${dots}
-        ${axisLabels(points, scale, height)}`, title);
+        ${axisLabels(points.map(point => point.label), scale, height)}`, title);
 }
+
+/* ---------- Wykres wielu serii z liniami odniesienia ---------- */
+
+/**
+ * @param {string[]} labels wspólna oś X (daty)
+ * @param {{points: {index, value}[], color, dashed, dots}[]} series
+ * @param {{value: number, color: string, label: string}[]} refLines poziome linie celu
+ */
+export function multiSeriesChart({ labels, series, refLines = [], height = 210, title = 'Wykres' }) {
+    if (!labels.length) return empty('Brak danych.');
+
+    const values = [
+        ...series.flatMap(item => item.points.map(point => point.value)),
+        ...refLines.map(line => line.value)
+    ];
+    const scale = makeScale(labels.length, values, height);
+
+    const targets = refLines.map(line => {
+        const y = scale.y(line.value);
+        return `<line x1="${PADDING.left}" y1="${y}" x2="${WIDTH - PADDING.right}" y2="${y}"
+                    stroke="${line.color}" stroke-width="1" stroke-dasharray="3 4" opacity="0.8"/>
+                <text class="chart__label" x="${WIDTH - PADDING.right}" y="${y - 4}" text-anchor="end"
+                    fill="${line.color}">${escapeHtml(line.label)}</text>`;
+    }).join('');
+
+    const lines = series.map(item => {
+        const dots = item.dots
+            ? item.points.map(point => `<circle cx="${scale.x(point.index)}" cy="${scale.y(point.value)}" r="2.5" fill="${item.color}"/>`).join('')
+            : '';
+        /* line: false → same punkty, bez łączenia. Surowa waga dzienna skacze
+           tak, że linia między pomiarami zaciemniałaby trend. */
+        const path = item.line === false ? '' : polyline(item.points, scale, item.color, item.dashed);
+        return path + dots;
+    }).join('');
+
+    return frame(height, `${grid(scale)}${targets}${lines}${axisLabels(labels, scale, height)}`, title);
+}
+
+/* ---------- Wykres słupkowy ---------- */
 
 export function barChart(points, { height = 190, color = 'var(--izolacja)', title = 'Wykres' } = {}) {
     if (!points.length) return empty('Brak danych — zapisz kilka sesji.');
 
-    const scale = makeScale(points, height);
+    const scale = makeScale(points.length, points.map(point => point.value), height);
     const innerWidth = WIDTH - PADDING.left - PADDING.right;
     const slot = innerWidth / points.length;
     const barWidth = Math.max(Math.min(slot * 0.6, 28), 4);
@@ -103,7 +149,7 @@ export function barChart(points, { height = 190, color = 'var(--izolacja)', titl
         return `<rect x="${Math.round(x * 10) / 10}" y="${y}" width="${barWidth}" height="${Math.max(baseline - y, 1)}" rx="2" fill="${color}"/>`;
     }).join('');
 
-    return frame(height, `${grid(scale, height)}${bars}${axisLabels(points, scale, height)}`, title);
+    return frame(height, `${grid(scale)}${bars}${axisLabels(points.map(point => point.label), scale, height)}`, title);
 }
 
 /* ---------- Kalendarz-heatmapa ---------- */

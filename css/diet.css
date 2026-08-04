@@ -1,0 +1,124 @@
+/* Widok DIETA — wpis wagi, kafelki celów. */
+
+.weight-form {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-bottom: var(--space-2);
+}
+
+.weight-form__value {
+    max-width: 110px;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}
+
+.weight-form__unit {
+    font-size: var(--fs-sm);
+    color: var(--text-dim);
+}
+
+/* ---------- Kafelki liczbowe ---------- */
+
+.stat-row {
+    display: flex;
+    gap: var(--space-2);
+}
+
+.stat {
+    flex: 1;
+    background: var(--surface-2);
+    border-radius: var(--radius-sm);
+    padding: var(--space-3);
+}
+
+.stat__label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+}
+
+.stat__value {
+    font-size: var(--fs-lg);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    margin-top: 2px;
+}
+
+.stat__hint {
+    font-size: var(--fs-xs);
+    color: var(--text-dim);
+}
+
+/* ---------- Cele makro ---------- */
+
+.macros {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-2);
+}
+
+.macro {
+    display: block;
+    background: var(--surface-2);
+    border-radius: var(--radius-sm);
+    padding: var(--space-3);
+}
+
+.macro--wide {
+    margin-bottom: var(--space-2);
+}
+
+.macro__label {
+    display: block;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+    margin-bottom: var(--space-1);
+}
+
+.macro__field {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-1);
+}
+
+.macro__input {
+    min-width: 0;
+    width: 100%;
+    background: none;
+    border: none;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+    /* 16 px, inaczej Safari na iOS zoomuje przy wejściu w pole. */
+    font-size: 16px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    padding: 2px 0;
+}
+
+.macro__input:focus {
+    outline: none;
+    border-bottom-color: var(--text-dim);
+}
+
+.macro__unit {
+    font-size: var(--fs-xs);
+    color: var(--text-dim);
+    white-space: nowrap;
+}
+
+/* ---------- Ostrzeżenie o zastoju ---------- */
+
+.banner--warn {
+    border-left-color: var(--combat);
+    color: var(--text);
+}
+
+.banner--warn strong {
+    color: var(--cardio);
+}
