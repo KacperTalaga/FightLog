@@ -42,6 +42,34 @@ function write(key, value) {
     localStorage.setItem(key, JSON.stringify(value));
 }
 
+/* ---------- Podpięcie zdalnego backendu ---------- */
+
+/* Firestore rejestruje się tu po zalogowaniu. Dopóki remote jest null,
+   aplikacja działa wyłącznie lokalnie — i musi działać w pełni. */
+let remote = null;
+const changeListeners = new Set();
+
+export function setRemote(handler) {
+    remote = handler;
+}
+
+export function onChange(listener) {
+    changeListeners.add(listener);
+}
+
+/* Powiadamiamy tylko o zmianach przychodzących z zewnątrz. Zapis lokalny
+   pochodzi z akcji użytkownika, a przerysowanie widoku w trakcie pisania
+   zabrałoby fokus z inputa. */
+function notifyChange() {
+    changeListeners.forEach(listener => listener());
+}
+
+/* Konflikt rozstrzygamy po updatedAt (last-write-wins). Aplikacja jest
+   jednoosobowa — CRDT byłby tu przerostem formy nad treścią. */
+function isNewer(incoming, existing) {
+    return !existing || (incoming.updatedAt ?? 0) > (existing.updatedAt ?? 0);
+}
+
 /* ---------- Sesje ---------- */
 
 /* Sesje trzymamy jako mapę id → sesja, żeby zapis pojedynczej sesji
@@ -66,6 +94,8 @@ export function saveSession(session) {
     const sessions = readSessionMap();
     sessions[session.id] = { ...session, updatedAt: Date.now() };
     write(KEYS.sessions, sessions);
+
+    remote?.saveSession(sessions[session.id]);
     return sessions[session.id];
 }
 
@@ -73,6 +103,28 @@ export function deleteSession(id) {
     const sessions = readSessionMap();
     delete sessions[id];
     write(KEYS.sessions, sessions);
+
+    remote?.deleteSession(id);
+}
+
+/* ---------- Sesje przychodzące z Firestore ---------- */
+
+export function applyRemoteSession(session) {
+    const sessions = readSessionMap();
+    if (!isNewer(session, sessions[session.id])) return;
+
+    sessions[session.id] = session;
+    write(KEYS.sessions, sessions);
+    notifyChange();
+}
+
+export function applyRemoteSessionRemoval(id) {
+    const sessions = readSessionMap();
+    if (!(id in sessions)) return;
+
+    delete sessions[id];
+    write(KEYS.sessions, sessions);
+    notifyChange();
 }
 
 /* ---------- Waga ---------- */
@@ -88,9 +140,26 @@ export function getWeights() {
 /* Jeden wpis na dzień, nadpisywalny — stąd data jako id dokumentu. */
 export function saveWeight(date, weight) {
     const weights = readWeightMap();
-    weights[date] = { id: date, date, weight, createdAt: weights[date]?.createdAt ?? Date.now() };
+    weights[date] = {
+        id: date,
+        date,
+        weight,
+        createdAt: weights[date]?.createdAt ?? Date.now(),
+        updatedAt: Date.now()
+    };
     write(KEYS.weights, weights);
+
+    remote?.saveWeight(weights[date]);
     return weights[date];
+}
+
+export function applyRemoteWeight(entry) {
+    const weights = readWeightMap();
+    if (!isNewer(entry, weights[entry.id])) return;
+
+    weights[entry.id] = entry;
+    write(KEYS.weights, weights);
+    notifyChange();
 }
 
 export function getLatestWeight() {
@@ -116,7 +185,16 @@ export function savePlan(days) {
     const current = getPlan();
     const updated = { version: current.version + 1, days, updatedAt: Date.now() };
     write(KEYS.plan, updated);
+
+    remote?.savePlan(updated);
     return updated;
+}
+
+export function applyRemotePlan(plan) {
+    if (!plan?.days || !isNewer(plan, getPlan())) return;
+
+    write(KEYS.plan, plan);
+    notifyChange();
 }
 
 /* ---------- Ustawienia ---------- */
@@ -127,9 +205,18 @@ export function getSettings() {
 }
 
 export function saveSettings(patch) {
-    const updated = { ...getSettings(), ...patch };
+    const updated = { ...getSettings(), ...patch, updatedAt: Date.now() };
     write(KEYS.settings, updated);
+
+    remote?.saveSettings(updated);
     return updated;
+}
+
+export function applyRemoteSettings(settings) {
+    if (!settings || !isNewer(settings, getSettings())) return;
+
+    write(KEYS.settings, { ...getSettings(), ...settings });
+    notifyChange();
 }
 
 /* ---------- Eksport / czyszczenie ---------- */

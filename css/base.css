@@ -63,6 +63,53 @@ textarea {
     color: var(--combat);
 }
 
+/* Logo zostaje wyśrodkowane w całej szerokości — przycisk konta wyjmujemy
+   z przepływu, żeby jego długość nie przesuwała nagłówka. */
+.app-header__auth {
+    position: absolute;
+    right: var(--space-3);
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: 36px;
+    padding: 0 var(--space-2);
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    font-size: var(--fs-xs);
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.sync-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #5a5a5a;
+}
+
+.sync-dot[data-status="synced"]  { background: var(--success); }
+.sync-dot[data-status="pending"] { background: var(--cardio); }
+.sync-dot[data-status="offline"] { background: var(--text-dim); }
+.sync-dot[data-status="error"]   { background: var(--combat); }
+
+/* ---------- Toast ---------- */
+
+.toast {
+    position: fixed;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + var(--space-3));
+    z-index: 200;
+    max-width: min(92vw, var(--content-max));
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: var(--space-3) var(--space-4);
+    font-size: var(--fs-sm);
+    line-height: 1.45;
+}
+
 /* ---------- Treść ---------- */
 
 .app-main {
