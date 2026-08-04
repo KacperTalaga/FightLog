@@ -11,6 +11,7 @@ import {
 } from '../store.js';
 import { buildSessionForDay, buildExtraSet, SESSION_TYPES } from '../data/session.js';
 import { suggestNext, formatLast, formatSuggestion } from '../progression.js';
+import { bestE1RM, epley1RM } from '../stats.js';
 import { createRestTimer, formatClock, REST_PRESETS } from '../timer.js';
 
 const SAVE_DEBOUNCE_MS = 500;
@@ -61,7 +62,13 @@ function buildSuggestions() {
     const result = {};
 
     for (const exercise of day.exercises) {
-        result[exercise.id] = { ...suggestNext(exercise, history, { bodyweightKg }), exercise, bodyweightKg };
+        result[exercise.id] = {
+            ...suggestNext(exercise, history, { bodyweightKg }),
+            exercise,
+            bodyweightKg,
+            /* Rekord sprzed dzisiejszej sesji — do oznaczania nowego PR w wierszu. */
+            best1RM: bestE1RM(exercise.id, history)
+        };
     }
     return result;
 }
@@ -146,7 +153,7 @@ function renderExerciseCard(entry) {
         </div>
         <p class="exercise__micro">${hint}${last ? ` · ostatnio: ${last}` : ''}</p>
         ${suggestion?.stagnant ? '<p class="hint">Stagnacja — rozważ deload 55%.</p>' : ''}
-        ${entry.sets.map((set, index) => renderSet(set, index, entry)).join('')}
+        ${entry.sets.map((set, index) => renderSet(set, index, entry, suggestion)).join('')}
         <div class="ex-card__foot">
             <button class="btn btn--small js-add-set" type="button">+ Seria</button>
             <input class="field__input field__input--inline" type="text" data-field="exerciseNote"
@@ -155,8 +162,13 @@ function renderExerciseCard(entry) {
     </section>`;
 }
 
-function renderSet(set, index, entry) {
+function renderSet(set, index, entry, suggestion) {
     const repsPlaceholder = entry.unit === 'sek' ? `${set.plannedReps ?? ''} s` : (set.plannedReps ?? '');
+
+    /* Rekord porównujemy do najlepszego 1RM sprzed dzisiejszej sesji — inaczej
+       pierwsza cięższa seria dnia „pobijałaby” kolejne w tym samym treningu. */
+    const estimated = set.done ? epley1RM(set.weight, set.reps) : null;
+    const isRecord = estimated != null && estimated > (suggestion?.best1RM ?? 0);
 
     return `
     <div class="set${set.done ? ' is-done' : ''}" data-index="${index}">
@@ -173,6 +185,7 @@ function renderSet(set, index, entry) {
                 aria-pressed="${set.done}" title="Wykonane">✓</button>
         </div>
         ${set.dropset ? renderDropset(set.dropset) : ''}
+        ${isRecord ? `<div class="set__pr">PR — nowy rekord (${Math.round(estimated * 10) / 10} kg 1RM)</div>` : ''}
     </div>`;
 }
 

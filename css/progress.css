@@ -1,0 +1,175 @@
+/* Widok PROGRESJA — panele, wykresy SVG, tabela rekordów, paski objętości. */
+
+.panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: var(--space-4);
+    margin-bottom: var(--space-3);
+}
+
+.panel__title {
+    font-size: var(--fs-md);
+    font-weight: 700;
+    margin-bottom: var(--space-2);
+}
+
+.panel__hint {
+    font-size: var(--fs-xs);
+    color: var(--text-dim);
+    line-height: 1.5;
+    margin-bottom: var(--space-4);
+}
+
+.chips--spread {
+    margin: var(--space-3) 0;
+}
+
+/* ---------- Wykresy ---------- */
+
+.chart {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+.chart__grid {
+    stroke: var(--border);
+    stroke-width: 1;
+}
+
+.chart__label {
+    fill: var(--text-dim);
+    font-size: 10px;
+    font-family: var(--font);
+}
+
+.chart-caption {
+    font-size: var(--fs-xs);
+    color: var(--text-dim);
+    line-height: 1.5;
+    margin-top: var(--space-2);
+}
+
+.chart-caption strong {
+    color: var(--text);
+}
+
+.chart-empty {
+    padding: var(--space-6) 0;
+    text-align: center;
+    color: var(--text-dim);
+    font-size: var(--fs-sm);
+}
+
+/* Heatmapa nie może się rozciągać na całą szerokość — kwadraty muszą zostać
+   kwadratami, więc przewijamy ją poziomo zamiast skalować. */
+.chart--heatmap {
+    width: auto;
+    max-width: 100%;
+    height: 100px;
+}
+
+.legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    margin-top: var(--space-3);
+    font-size: var(--fs-xs);
+    color: var(--text-dim);
+}
+
+.legend__item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+}
+
+.legend__dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+}
+
+/* ---------- Tabela rekordów ---------- */
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--fs-sm);
+}
+
+.table th {
+    text-align: left;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+    padding-bottom: var(--space-2);
+}
+
+.table td {
+    padding: var(--space-2) 0;
+    border-top: 1px solid var(--border);
+}
+
+.table__num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+/* ---------- Paski objętości ---------- */
+
+.meter {
+    margin-bottom: var(--space-3);
+}
+
+.meter:last-child {
+    margin-bottom: 0;
+}
+
+.meter__head {
+    display: flex;
+    justify-content: space-between;
+    font-size: var(--fs-sm);
+    margin-bottom: var(--space-1);
+}
+
+.meter__value {
+    color: var(--text-dim);
+    font-variant-numeric: tabular-nums;
+}
+
+.meter__track {
+    position: relative;
+    height: 8px;
+    background: var(--surface-2);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+/* Pas celu 10–20 serii przy skali do 25. */
+.meter__zone {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 40%;
+    width: 40%;
+    background: #2a2a2a;
+}
+
+.meter__fill {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    background: var(--cardio);
+    border-radius: 4px;
+    transition: width var(--transition);
+}
+
+.meter__fill.is-ok {
+    background: var(--success);
+}

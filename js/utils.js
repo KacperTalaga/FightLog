@@ -26,6 +26,20 @@ export function parseDateKey(key) {
     return new Date(year, month - 1, day);
 }
 
+/* Poniedziałek tygodnia, w którym leży dana data — klucz do grupowania
+   objętości tygodniowej. */
+export function weekStartKey(key) {
+    const date = parseDateKey(key);
+    date.setDate(date.getDate() - ((date.getDay() + 6) % 7));
+    return dateKey(date);
+}
+
+/* '2026-08-04' → '04.08' — na osi X pełna data się nie mieści. */
+export function shortDate(key) {
+    const [, month, day] = key.split('-');
+    return `${day}.${month}`;
+}
+
 /* Indeks dnia w tablicy PLAN, która zaczyna się od poniedziałku.
    getDay() zwraca 0 dla niedzieli, stąd przesunięcie o 6. */
 export function planDayIndex(date = new Date()) {
