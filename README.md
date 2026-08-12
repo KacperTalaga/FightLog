@@ -12,7 +12,19 @@ kliknięciem nie zadziała** (`file://` blokuje importy). Potrzebny jest serwer:
 python -m http.server 8000
 ```
 
-Potem http://127.0.0.1:8000.
+Potem http://localhost:8000. Używaj `localhost`, a nie `127.0.0.1` — Firebase ma
+na liście dozwolonych domen tylko ten pierwszy adres.
+
+## Testy
+
+```bash
+node tests/check.mjs
+```
+
+Czysty Node, bez zależności i bez przeglądarki. Pilnuje niezmienników, które
+łatwo zepsuć: wzór Epleya, klucze dat wobec stref czasowych, reguły progresji,
+średnią kroczącą wagi oraz **kompletność listy plików w `sw.js`** — plik dodany
+do `js/` lub `css/` i pominięty w szkielecie wywali aplikację offline.
 
 ## Struktura
 
@@ -23,7 +35,10 @@ js/      app.js · store.js · sync.js · progression.js · timer.js · utils.js
          data/     plan.js (seed planu) · session.js (fabryki sesji)
          firebase/ config.js
          views/    plan.js · log.js · progress.js · diet.js · knowledge.js
-firestore.rules
+icons/   icon-192.png · icon-512.png · apple-touch-icon.png
+tools/   make-icons.mjs
+tests/   check.mjs
+manifest.json · sw.js · firestore.rules
 ```
 
 `store.js` to jedyne miejsce dotykające `localStorage`. `sync.js` rejestruje się
@@ -77,6 +92,42 @@ W trybie standalone (aplikacja dodana na ekran główny) `signInWithPopup` bywa
 zawodny, dlatego wykrywamy standalone i przechodzimy na `signInWithRedirect`.
 Jeśli Safari zablokuje również redirect (ITP), aplikacja pokazuje komunikat na
 dole ekranu zamiast cichego błędu w konsoli.
+
+## PWA
+
+### Instalacja na iPhonie
+
+Safari → otwórz `fightlog.pages.dev` → przycisk udostępniania → **Dodaj do ekranu
+głównego**. Aplikacja startuje wtedy bez paska Safari i działa w trybie samolotowym.
+
+### Wersjonowanie cache'a — ważne przy każdym wdrożeniu
+
+`sw.js` serwuje szkielet aplikacji strategią **cache-first**. Oznacza to, że po
+wdrożeniu zmian przeglądarka będzie pokazywała starą wersję, dopóki nie zmieni
+się nazwa cache'a. **Przy każdym wdrożeniu podnieś `CACHE_NAME`** w `sw.js`:
+
+```js
+const CACHE_NAME = 'fightlog-v2';   // było v1
+```
+
+Stare cache są kasowane w zdarzeniu `activate`. Gdy nowa wersja jest gotowa,
+aplikacja pokazuje toast „Nowa wersja — dotknij, żeby odświeżyć"; podmiana
+workera następuje dopiero po dotknięciu, żeby nie przerwać zapisywania serii.
+
+Ruch do API Firebase (`firestore.googleapis.com`, `identitytoolkit.googleapis.com`
+i pokrewne) **omija service workera w całości** — Firestore ma własną warstwę
+offline i podwójne buforowanie zrywałoby sesje.
+
+### Ikony
+
+Ikony są generowane proceduralnie, bez plików graficznych z zewnątrz:
+
+```bash
+node tools/make-icons.mjs
+```
+
+Znak (litera F) mieści się w środkowym 56% płótna, czyli w bezpiecznym obszarze
+ikony `maskable`, więc ten sam plik obsługuje oba warianty.
 
 ## Wskaźnik synchronizacji
 

@@ -95,6 +95,11 @@ textarea {
 
 /* ---------- Toast ---------- */
 
+.toast--action {
+    border-color: var(--text-dim);
+    cursor: pointer;
+}
+
 .toast {
     position: fixed;
     left: 50%;

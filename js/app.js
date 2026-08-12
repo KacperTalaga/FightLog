@@ -107,6 +107,55 @@ function wireAuth() {
     renderAuth();
 }
 
+/* ---------- Service worker ---------- */
+
+let reloading = false;
+
+/* Nowa wersja nie wchodzi sama — użytkownik może być w środku serii.
+   Toast czeka na dotknięcie, dopiero potem podmieniamy workera i odświeżamy. */
+function promptUpdate(worker) {
+    const element = toast('Nowa wersja — dotknij, żeby odświeżyć', 30000);
+    element.classList.add('toast--action');
+    element.addEventListener('click', () => {
+        element.remove();
+        worker.postMessage({ type: 'SKIP_WAITING' });
+    });
+}
+
+function watchForUpdate(registration) {
+    if (registration.waiting) promptUpdate(registration.waiting);
+
+    registration.addEventListener('updatefound', () => {
+        const installing = registration.installing;
+        if (!installing) return;
+
+        installing.addEventListener('statechange', () => {
+            /* Brak controllera = pierwsza instalacja, a nie aktualizacja —
+               wtedy nie ma o czym informować. */
+            if (installing.state === 'installed' && navigator.serviceWorker.controller) {
+                promptUpdate(installing);
+            }
+        });
+    });
+}
+
+async function registerServiceWorker() {
+    if (!('serviceWorker' in navigator)) return;
+
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (reloading) return;
+        reloading = true;
+        window.location.reload();
+    });
+
+    try {
+        watchForUpdate(await navigator.serviceWorker.register('./sw.js'));
+    } catch (error) {
+        /* Brak trybu offline nie może wywalić aplikacji — reszta działa. */
+        console.warn('FightLog: service worker nie wystartował', error);
+    }
+}
+
 /* ---------- Start ---------- */
 
 function init() {
@@ -125,6 +174,8 @@ function init() {
         setSyncStatus(STATUS.ERROR);
         toast(`Firebase nie wystartował: ${error.message}`);
     });
+
+    registerServiceWorker();
 }
 
 /* Skrypt jest modułem, więc wykonuje się po sparsowaniu DOM — bez DOMContentLoaded. */
