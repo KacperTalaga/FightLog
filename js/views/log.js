@@ -36,7 +36,40 @@ export function mountLog(container) {
     /* iOS potrafi ubić PWA w tle bez ostrzeżenia — niedokończony debounce
        zabrałby ze sobą ostatnią wpisaną serię. */
     window.addEventListener('pagehide', flushSave);
+
+    /* Blokada wygaszania pada przy każdym schowaniu ekranu i trzeba ją brać
+       od nowa po powrocie do aplikacji. */
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') updateWakeLock();
+    });
     root.dataset.mounted = '1';
+}
+
+/* ---------- Blokada wygaszania ekranu ---------- */
+
+let wakeLock = null;
+
+/* Ekran gasnący w połowie ćwiczenia to najgłupszy sposób na zgubienie serii.
+   Blokadę trzymamy tylko przy otwartej sesji siłowej — przy combat i na
+   pustym dniu nie ma czego pilnować. */
+async function updateWakeLock() {
+    const shouldHold = session?.type === SESSION_TYPES.STRENGTH;
+
+    if (!shouldHold) {
+        await wakeLock?.release().catch(() => {});
+        wakeLock = null;
+        return;
+    }
+
+    if (wakeLock || !('wakeLock' in navigator)) return;
+
+    try {
+        wakeLock = await navigator.wakeLock.request('screen');
+        wakeLock.addEventListener('release', () => { wakeLock = null; });
+    } catch {
+        /* Odmowa (np. tryb oszczędzania baterii) nie jest błędem krytycznym —
+           aplikacja działa dalej, ekran po prostu gaśnie normalnie. */
+    }
 }
 
 /* ---------- Ładowanie ---------- */
@@ -51,6 +84,7 @@ function loadDate(date) {
     session = getSession(date);
     suggestions = session && session.type === SESSION_TYPES.STRENGTH ? buildSuggestions() : {};
     render();
+    updateWakeLock();
 }
 
 /* Sugestie liczymy z historii BEZ bieżącej sesji — inaczej dzisiejsze wpisy
@@ -168,7 +202,7 @@ function renderExerciseCard(entry) {
             <span class="exercise__name">${escapeHtml(entry.name)}</span>
             <span class="tag tag--${escapeHtml(entry.tag)}">${escapeHtml(entry.tag)}</span>
         </div>
-        <p class="exercise__micro">${hint}${last ? ` · ostatnio: ${last}` : ''}</p>
+        ${renderMicro(hint, last, suggestion)}
         ${technique ? `<p class="exercise__note">${escapeHtml(technique)}</p>` : ''}
         ${suggestion?.stagnant ? '<p class="hint">Stagnacja — rozważ deload 55%.</p>' : ''}
         ${renderSets(entry, suggestion)}
@@ -179,6 +213,30 @@ function renderExerciseCard(entry) {
         </div>
         ${renderMachineField(entry, suggestion)}
     </section>`;
+}
+
+/* „ostatnio: 70 kg × 8” rozwija się do kompletu serii z poprzedniego razu —
+   przy sztandze pytanie brzmi „ile zrobiłem w każdej serii”, a nie „jaki był
+   najlepszy wynik”. */
+function renderMicro(hint, last, suggestion) {
+    const sets = suggestion?.lastSets ?? [];
+
+    if (!last || !sets.length) {
+        return `<p class="exercise__micro">${hint}</p>`;
+    }
+
+    const detail = sets
+        .map((set, index) => `${index + 1}) ${set.weight ?? '—'} × ${set.reps}`)
+        .join(' · ');
+
+    return `
+    <div class="exercise__micro">
+        ${hint} ·
+        <button class="micro-toggle js-last-sets" type="button" aria-expanded="false">
+            ostatnio: ${last}
+        </button>
+        <div class="exercise__last-sets">${escapeHtml(suggestion.last.date)}: ${detail}</div>
+    </div>`;
 }
 
 /* Pole z listą podpowiedzi zamiast selecta: nową maszynę wpisujesz od ręki,
@@ -418,6 +476,7 @@ function handleClick(event) {
     if (button.classList.contains('js-timer')) return startTimer(Number(button.dataset.sec), button);
     if (button.classList.contains('js-timer-stop')) return timer?.stop();
     if (button.classList.contains('js-copy')) return copyPreviousSet(button);
+    if (button.classList.contains('js-last-sets')) return toggleLastSets(button);
     if (button.classList.contains('js-chip')) return selectChip(button);
     if (button.classList.contains('js-dropset')) return toggleDropset(button);
     if (button.classList.contains('js-done')) return toggleDone(button);
@@ -444,6 +503,7 @@ function startSession(type) {
     saveSession(session);
     suggestions = session.type === SESSION_TYPES.STRENGTH ? buildSuggestions() : {};
     render();
+    updateWakeLock();
     setStatus('Zapisano');
 }
 
@@ -460,6 +520,7 @@ function removeSession() {
     session = null;
     timer?.stop();
     render();
+    updateWakeLock();
 }
 
 function toggleDropset(button) {
@@ -532,6 +593,12 @@ function selectChip(button) {
         chip.classList.toggle('is-active', chip === button);
     });
     scheduleSave();
+}
+
+function toggleLastSets(button) {
+    const container = button.closest('.exercise__micro');
+    const isOpen = container.classList.toggle('is-open');
+    button.setAttribute('aria-expanded', String(isOpen));
 }
 
 function toggleTimerPanel(button) {

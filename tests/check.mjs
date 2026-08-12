@@ -25,7 +25,12 @@ globalThis.localStorage = {
     setItem: (key, value) => memory.set(key, String(value)),
     removeItem: key => memory.delete(key)
 };
-globalThis.document = { getElementById: () => null, querySelector: () => null };
+globalThis.document = {
+    getElementById: () => null,
+    querySelector: () => null,
+    addEventListener: () => {},
+    visibilityState: 'visible'
+};
 globalThis.window = { addEventListener: () => {} };
 
 const load = path => import(pathToFileURL(join(ROOT, path)).href);
@@ -273,6 +278,30 @@ function mockButton(className, dataset = {}) {
     };
     return element;
 }
+
+/* ---------- Projekcja wagi ---------- */
+
+const falling = Array.from({ length: 22 }, (_, index) => ({
+    date: `2026-07-${String(index + 1).padStart(2, '0')}`,
+    weight: Math.round((80 - index * 0.1) * 10) / 10
+}));
+
+const projection = nutrition.projectTarget(falling, 75);
+check('brak projekcji przy spadku', projection?.eta != null, projection);
+check('tempo powinno być ujemne', projection.trend.perWeek < 0, projection.trend.perWeek);
+check('zła reszta do celu', projection.remaining === 3.2, projection.remaining);
+check('data celu w przeszłości', projection.eta > falling.at(-1).date, projection.eta);
+
+const flat = falling.map(item => ({ ...item, weight: 79 }));
+check('płaski trend dostał datę celu', nutrition.projectTarget(flat, 75).eta === null,
+    nutrition.projectTarget(flat, 75));
+
+check('projekcja przy jednym pomiarze',
+    nutrition.projectTarget([{ date: '2026-07-01', weight: 79 }], 75) === null);
+
+check('cel osiągnięty nieoznaczony',
+    nutrition.projectTarget(falling, 90).reached === true,
+    nutrition.projectTarget(falling, 90));
 
 /* ---------- PWA ---------- */
 

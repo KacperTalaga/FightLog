@@ -112,6 +112,20 @@
     white-space: nowrap;
 }
 
+.projection {
+    margin-top: var(--space-3);
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--border);
+    font-size: var(--fs-sm);
+    color: var(--text-dim);
+    line-height: 1.6;
+}
+
+.projection strong {
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+}
+
 /* ---------- Ostrzeżenie o zastoju ---------- */
 
 .banner--warn {

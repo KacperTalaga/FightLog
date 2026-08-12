@@ -183,6 +183,34 @@
     margin-top: var(--space-3);
 }
 
+/* ---------- Rozwijane „ostatnio” ---------- */
+
+.micro-toggle {
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--text-dim);
+    font-size: inherit;
+    font-family: inherit;
+    text-decoration: underline dotted;
+    text-underline-offset: 3px;
+    cursor: pointer;
+}
+
+.exercise__last-sets {
+    display: none;
+    margin-top: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    background: var(--surface-2);
+    border-radius: var(--radius-sm);
+    font-variant-numeric: tabular-nums;
+    line-height: 1.6;
+}
+
+.exercise__micro.is-open .exercise__last-sets {
+    display: block;
+}
+
 .ex-card__machine {
     display: flex;
     align-items: center;

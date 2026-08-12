@@ -108,7 +108,9 @@ export function suggestNext(exercise, sessions, options = {}) {
         source: 'plan',
         stagnant: isStagnant(history),
         deload,
-        last: null
+        last: null,
+        lastSets: [],
+        sessionsOnExercise: history.length
     };
 
     if (!history.length) {
@@ -119,6 +121,9 @@ export function suggestNext(exercise, sessions, options = {}) {
         const previousBest = bestReps(previous.sets, workingWeight);
 
         result.last = { weight: workingWeight, reps: previousBest, date: previous.date };
+        /* Komplet serii z poprzedniego razu — w siłowni liczy się „ile zrobiłem
+           w każdej serii”, a nie sam najlepszy wynik. */
+        result.lastSets = previous.sets.map(set => ({ weight: set.weight, reps: set.reps }));
 
         /* Ciężar rośnie tylko gdy wszystkie zaplanowane serie zostały wykonane
            i każda trafiła w górną granicę zakresu. Trzy udane serie z czterech

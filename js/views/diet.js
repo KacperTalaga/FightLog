@@ -5,7 +5,10 @@
 
 import { dateKey, escapeHtml, parseNumber, shortDate } from '../utils.js';
 import { getWeights, saveWeight, getSettings, saveSettings } from '../store.js';
-import { movingAverage, stallInfo, latestAverage, AVERAGE_WINDOW_DAYS, STALL_WINDOW_DAYS, KCAL_CUT } from '../nutrition.js';
+import {
+    movingAverage, stallInfo, latestAverage, projectTarget,
+    AVERAGE_WINDOW_DAYS, STALL_WINDOW_DAYS, KCAL_CUT
+} from '../nutrition.js';
 import { multiSeriesChart } from '../chart.js';
 
 const MACROS = [
@@ -115,7 +118,39 @@ function renderChart(weights, settings) {
         })}
         <p class="chart-caption">Szare punkty to pomiary dzienne, niebieska linia to średnia
             ${AVERAGE_WINDOW_DAYS}-dniowa. Trend czytaj z linii, nie z punktów.</p>
+        ${renderProjection(weights, settings)}
     </section>`;
+}
+
+/* ---------- Projekcja ---------- */
+
+function formatDate(key) {
+    return key.split('-').reverse().join('.');
+}
+
+function renderProjection(weights, settings) {
+    const projection = projectTarget(weights, settings.targetWeight);
+    if (!projection) return '';
+
+    const { trend, remaining, reached, eta, daysLeft } = projection;
+    const pace = trend.perWeek === 0
+        ? 'stoi w miejscu'
+        : `${trend.perWeek > 0 ? '+' : ''}${trend.perWeek} kg/tydz.`;
+
+    if (reached) {
+        return `<p class="projection">Cel ${settings.targetWeight} kg osiągnięty.
+            Tempo z ostatnich ${trend.days} dni: <strong>${pace}</strong>.</p>`;
+    }
+
+    if (!eta) {
+        return `<p class="projection">Tempo z ostatnich ${trend.days} dni: <strong>${pace}</strong>.
+            Przy tym trendzie waga nie schodzi — daty celu nie ma sensu liczyć.</p>`;
+    }
+
+    return `<p class="projection">
+        Tempo: <strong>${pace}</strong> · zostało ${remaining} kg ·
+        cel ${settings.targetWeight} kg ok. <strong>${formatDate(eta)}</strong> (za ${daysLeft} dni).
+    </p>`;
 }
 
 /* ---------- Cele ---------- */
