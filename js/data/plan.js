@@ -12,7 +12,10 @@
      unit        — 'powt' albo 'sek' (izometria); sekundy nie idą do wyliczeń 1RM
      technique   — wskazówka pokazywana w widoku PLAN */
 
-export const PLAN_VERSION = 1;
+/* Podnieś przy każdej zmianie treści planu — inaczej seed nie nadpisze
+   wersji zapisanej w localStorage i zmiana nie dotrze do użytkownika.
+   v2: przyrost przy podciąganiu 5 → 2.5 kg. */
+export const PLAN_VERSION = 2;
 
 const DEFAULTS = {
     sets: 3,
@@ -38,7 +41,7 @@ const DAYS = [
         isCombat: false, isRest: false,
         note: 'Plecy + nogi + biceps. Podciąganie i wiosłowanie na objętość pleców.',
         exercises: [
-            { id: 'pullup', name: 'Podciąganie', tag: 'compound', sets: 4, repRange: [6, 10], startWeight: 0, increment: 5, bodyweight: true, technique: 'Gdy 4x10 → dodaj +5 kg. Pełny zakres.' },
+            { id: 'pullup', name: 'Podciąganie', tag: 'compound', sets: 4, repRange: [6, 10], startWeight: 0, increment: 2.5, bodyweight: true, technique: 'Gdy 4x10 → dodaj obciążenie. Pełny zakres.' },
             { id: 'db-row', name: 'Wiosłowanie hantlem', tag: 'compound', sets: 3, repRange: [8, 12], startWeight: 22, increment: 2, perSide: true, technique: 'Łopatka: ściągnij na dole, kontroluj powrót.' },
             { id: 'leg-press', name: 'Leg press', tag: 'compound', sets: 3, repRange: [10, 15], startWeight: 100, increment: 5, technique: 'Stopy wysoko i szeroko. Kolana nie blokuj.' },
             { id: 'leg-curl', name: 'Leg curl', tag: 'izolacja', sets: 3, repRange: [12, 15], startWeight: null, increment: 5, technique: 'Prewencja kontuzji kolana. 2s excentric.' },
@@ -86,7 +89,7 @@ const DAYS = [
         note: 'Druga dawka objętości. Bulgarian na start — transfer do kopnięć.',
         exercises: [
             { id: 'bss', name: 'Bulgarian split squat', tag: 'compound', sets: 3, repRange: [8, 10], startWeight: 14, increment: 2, perSide: true, technique: 'Tylna noga na ławce. Ciężar = jeden hantel z pary. Transfer do kopnięć.' },
-            { id: 'pullup2', name: 'Podciąganie / wiosłowanie', tag: 'compound', sets: 3, repRange: [8, 12], startWeight: 0, increment: 5, bodyweight: true, technique: 'Druga dawka objętości na plecy.' },
+            { id: 'pullup2', name: 'Podciąganie / wiosłowanie', tag: 'compound', sets: 3, repRange: [8, 12], startWeight: 0, increment: 2.5, bodyweight: true, technique: 'Druga dawka objętości na plecy.' },
             { id: 'incline-db', name: 'Hantle skośna 30°', tag: 'compound', sets: 3, repRange: [8, 12], startWeight: 26, increment: 2, technique: 'Górna klatka. Inny kąt niż czwartek. Ciężar = jeden hantel.' },
             { id: 'leg-ext', name: 'Leg extension', tag: 'izolacja', sets: 3, repRange: [12, 15], startWeight: 50, increment: 5, technique: 'Szczytowy skurcz 1s. Kontrolowany excentric.' },
             { id: 'rear-delt', name: 'Rear delt maszyna', tag: 'izolacja', sets: 3, repRange: [15, 15], startWeight: null, increment: 5, technique: 'Ściśnij łopatki na końcu.' },
