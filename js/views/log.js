@@ -11,7 +11,7 @@ import {
 } from '../store.js';
 import { buildSessionForDay, buildExtraSet, SESSION_TYPES } from '../data/session.js';
 import { suggestNext, formatLast, formatSuggestion } from '../progression.js';
-import { bestE1RM, epley1RM } from '../stats.js';
+import { bestE1RM, markRecords } from '../stats.js';
 import { createRestTimer, formatClock, REST_PRESETS } from '../timer.js';
 
 const SAVE_DEBOUNCE_MS = 500;
@@ -120,21 +120,28 @@ function renderStrength() {
     if (!session.exercises.length) {
         return '<div class="empty">Ten dzień nie ma ćwiczeń w planie.</div>';
     }
-    return renderTimer() + session.exercises.map(renderExerciseCard).join('');
+    return session.exercises.map(renderExerciseCard).join('') + renderRestTimer();
 }
 
-function renderTimer() {
+/* Timer wisi nad tab barem zamiast siedzieć w nagłówku logu: między seriami
+   jesteś w połowie listy ćwiczeń i przewijanie na górę po każdej serii
+   nie miało sensu. */
+function renderRestTimer() {
     const preferred = getSettings().restTimerSec;
-    const buttons = REST_PRESETS.map(seconds => `
-        <button class="chip${seconds === preferred ? ' is-active' : ''} js-timer" type="button" data-sec="${seconds}">
-            ${seconds}s
-        </button>`).join('');
+    const presets = REST_PRESETS.map(seconds => `
+        <button class="chip js-timer${seconds === preferred ? ' is-active' : ''}" type="button"
+            data-sec="${seconds}">${seconds}s</button>`).join('');
 
     return `
-    <div class="timer">
-        <span class="timer__display" id="timer-display">—</span>
-        ${buttons}
-        <button class="chip js-timer-stop" type="button">Stop</button>
+    <div class="rest-timer" id="rest-timer">
+        <div class="rest-timer__presets">
+            ${presets}
+            <button class="chip js-timer-stop" type="button">Stop</button>
+        </div>
+        <button class="rest-timer__toggle js-timer-toggle" type="button" aria-expanded="false"
+            aria-label="Timer odpoczynku">
+            <span id="timer-display">Timer</span>
+        </button>
     </div>`;
 }
 
@@ -144,6 +151,9 @@ function renderExerciseCard(entry) {
     const hint = suggestion
         ? `sugestia: ${formatSuggestion(suggestion, suggestion.exercise, suggestion.bodyweightKg)}`
         : '';
+    /* Wskazówka techniczna pochodzi z planu, nie z sesji — sesja przechowuje
+       tylko to, co zmienne, a technika jest opisem ćwiczenia. */
+    const technique = suggestion?.exercise?.technique;
 
     return `
     <section class="ex-card" data-exercise-id="${escapeHtml(entry.id)}">
@@ -152,8 +162,9 @@ function renderExerciseCard(entry) {
             <span class="tag tag--${escapeHtml(entry.tag)}">${escapeHtml(entry.tag)}</span>
         </div>
         <p class="exercise__micro">${hint}${last ? ` · ostatnio: ${last}` : ''}</p>
+        ${technique ? `<p class="exercise__note">${escapeHtml(technique)}</p>` : ''}
         ${suggestion?.stagnant ? '<p class="hint">Stagnacja — rozważ deload 55%.</p>' : ''}
-        ${entry.sets.map((set, index) => renderSet(set, index, entry, suggestion)).join('')}
+        ${renderSets(entry, suggestion)}
         <div class="ex-card__foot">
             <button class="btn btn--small js-add-set" type="button">+ Seria</button>
             <input class="field__input field__input--inline" type="text" data-field="exerciseNote"
@@ -162,13 +173,13 @@ function renderExerciseCard(entry) {
     </section>`;
 }
 
-function renderSet(set, index, entry, suggestion) {
-    const repsPlaceholder = entry.unit === 'sek' ? `${set.plannedReps ?? ''} s` : (set.plannedReps ?? '');
+function renderSets(entry, suggestion) {
+    const records = markRecords(entry.sets, suggestion?.best1RM ?? 0);
+    return entry.sets.map((set, index) => renderSet(set, index, entry, records[index])).join('');
+}
 
-    /* Rekord porównujemy do najlepszego 1RM sprzed dzisiejszej sesji — inaczej
-       pierwsza cięższa seria dnia „pobijałaby” kolejne w tym samym treningu. */
-    const estimated = set.done ? epley1RM(set.weight, set.reps) : null;
-    const isRecord = estimated != null && estimated > (suggestion?.best1RM ?? 0);
+function renderSet(set, index, entry, record) {
+    const repsPlaceholder = entry.unit === 'sek' ? `${set.plannedReps ?? ''} s` : (set.plannedReps ?? '');
 
     return `
     <div class="set${set.done ? ' is-done' : ''}" data-index="${index}">
@@ -179,13 +190,15 @@ function renderSet(set, index, entry, suggestion) {
             <span class="set__x">×</span>
             <input class="set__input" type="text" inputmode="numeric" data-field="reps"
                 placeholder="${repsPlaceholder}" value="${set.reps ?? ''}" aria-label="Powtórzenia">
+            <button class="set__btn js-copy" type="button" title="Jak poprzednia seria"
+                aria-label="Skopiuj ciężar i powtórzenia z poprzedniej serii"${index === 0 ? ' disabled' : ''}>↓</button>
             <button class="set__btn js-dropset${set.dropset ? ' is-active' : ''}" type="button"
                 aria-pressed="${Boolean(set.dropset)}" title="Dropset">D</button>
             <button class="set__btn set__btn--done js-done" type="button"
                 aria-pressed="${set.done}" title="Wykonane">✓</button>
         </div>
         ${set.dropset ? renderDropset(set.dropset) : ''}
-        ${isRecord ? `<div class="set__pr">PR — nowy rekord (${Math.round(estimated * 10) / 10} kg 1RM)</div>` : ''}
+        ${record.isRecord ? `<div class="set__pr">PR — nowy rekord (${Math.round(record.estimated * 10) / 10} kg 1RM)</div>` : ''}
     </div>`;
 }
 
@@ -314,8 +327,10 @@ function handleClick(event) {
 
     if (button.classList.contains('js-start')) return startSession(button.dataset.type);
     if (button.classList.contains('js-delete')) return removeSession();
+    if (button.classList.contains('js-timer-toggle')) return toggleTimerPanel(button);
     if (button.classList.contains('js-timer')) return startTimer(Number(button.dataset.sec), button);
     if (button.classList.contains('js-timer-stop')) return timer?.stop();
+    if (button.classList.contains('js-copy')) return copyPreviousSet(button);
     if (button.classList.contains('js-chip')) return selectChip(button);
     if (button.classList.contains('js-dropset')) return toggleDropset(button);
     if (button.classList.contains('js-done')) return toggleDone(button);
@@ -388,6 +403,22 @@ function toggleDone(button) {
     scheduleSave();
 }
 
+/* Przepisuje wynik z poprzedniej serii. Gdy poprzednia nie ma jeszcze wpisanych
+   wartości, bierzemy jej sugestię — i tak jest tym, co widać na szaro. */
+function copyPreviousSet(button) {
+    const entry = entryFrom(button);
+    const index = Number(button.closest('[data-index]').dataset.index);
+    if (index === 0) return;
+
+    const previous = entry.sets[index - 1];
+    const set = entry.sets[index];
+    set.weight = previous.weight ?? previous.plannedWeight;
+    set.reps = previous.reps ?? previous.plannedReps;
+
+    refreshExercise(entry.id);
+    scheduleSave();
+}
+
 function addSet(button) {
     const entry = entryFrom(button);
     entry.sets.push(buildExtraSet(entry.sets.at(-1)));
@@ -406,24 +437,38 @@ function selectChip(button) {
     scheduleSave();
 }
 
+function toggleTimerPanel(button) {
+    const panel = button.closest('.rest-timer');
+    const isOpen = panel.classList.toggle('is-open');
+    button.setAttribute('aria-expanded', String(isOpen));
+}
+
 function startTimer(seconds, button) {
+    const panel = button.closest('.rest-timer');
+    const toggle = () => document.querySelector('.rest-timer__toggle');
     const display = () => document.getElementById('timer-display');
 
-    button.closest('.timer').querySelectorAll('.js-timer').forEach(chip => {
+    panel.querySelectorAll('.js-timer').forEach(chip => {
         chip.classList.toggle('is-active', chip === button);
     });
 
     timer ??= createRestTimer({
         onTick: remaining => {
             const element = display();
-            if (element) element.textContent = formatClock(remaining);
+            /* null = timer stoi; wtedy pigułka wraca do etykiety zamiast myślnika. */
+            if (element) element.textContent = remaining == null ? 'Timer' : formatClock(remaining);
+            toggle()?.classList.toggle('is-running', remaining != null);
         },
         onFinish: () => {
-            const element = display();
-            if (element) element.classList.add('is-finished');
-            setTimeout(() => display()?.classList.remove('is-finished'), 3000);
+            const element = toggle();
+            if (!element) return;
+
+            element.classList.add('is-finished');
+            setTimeout(() => toggle()?.classList.remove('is-finished'), 5000);
         }
     });
 
     timer.start(seconds);
+    panel.classList.remove('is-open');
+    panel.querySelector('.js-timer-toggle').setAttribute('aria-expanded', 'false');
 }

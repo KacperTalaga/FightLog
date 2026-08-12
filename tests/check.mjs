@@ -25,7 +25,8 @@ globalThis.localStorage = {
     setItem: (key, value) => memory.set(key, String(value)),
     removeItem: key => memory.delete(key)
 };
-globalThis.document = { getElementById: () => null };
+globalThis.document = { getElementById: () => null, querySelector: () => null };
+globalThis.window = { addEventListener: () => {} };
 
 const load = path => import(pathToFileURL(join(ROOT, path)).href);
 
@@ -108,6 +109,32 @@ check('dropset nie wchodzi do objętości',
 check('nieodhaczona seria daje objętość',
     stats.volumeOfSet({ weight: 70, reps: 10, done: false, dropset: null }) === 0);
 
+/* Zgłoszony błąd: podciąganie 75.9 kg × 8, potem × 6, potem × 6 — każda seria
+   dostawała „PR”, mimo że druga i trzecia były słabsze od pierwszej. */
+const pullups = [
+    { weight: 75.9, reps: 8, done: true },
+    { weight: 75.9, reps: 6, done: true },
+    { weight: 75.9, reps: 6, done: true }
+];
+
+const withoutHistory = stats.markRecords(pullups, 0);
+check('PR bez żadnej historii', withoutHistory.every(item => !item.isRecord), withoutHistory);
+
+const withHistory = stats.markRecords(pullups, 90);
+check('najlepsza seria nie dostała PR', withHistory[0].isRecord === true, withHistory[0]);
+check('słabsza druga seria dostała PR', withHistory[1].isRecord === false, withHistory[1]);
+check('słabsza trzecia seria dostała PR', withHistory[2].isRecord === false, withHistory[2]);
+
+const rising = stats.markRecords([
+    { weight: 75.9, reps: 6, done: true },
+    { weight: 75.9, reps: 8, done: true }
+], 90);
+check('rosnąca seria: pierwsza bez PR', rising[0].isRecord === true, rising[0]);
+check('rosnąca seria: lepsza druga bez PR', rising[1].isRecord === true, rising[1]);
+
+check('nieodhaczona seria dostała PR',
+    stats.markRecords([{ weight: 200, reps: 10, done: false }], 90)[0].isRecord === false);
+
 const weights = [
     { date: '2026-08-01', weight: 79.0 }, { date: '2026-08-02', weight: 79.4 },
     { date: '2026-08-03', weight: 78.8 }, { date: '2026-08-04', weight: 79.2 },
@@ -118,6 +145,45 @@ check('średnia krocząca źle policzona', nutrition.movingAverage(weights).at(-
     nutrition.movingAverage(weights).at(-1).value);
 check('stary pomiar wchodzi do okna 7 dni',
     nutrition.movingAverage([{ date: '2026-07-20', weight: 85 }, ...weights.slice(0, 2)]).at(-1).value === 79.2);
+
+/* ---------- Widok logu ---------- */
+
+const { mountLog } = await load('js/views/log.js');
+
+const handlers = {};
+const root = {
+    innerHTML: '',
+    dataset: {},
+    addEventListener: (type, handler) => { handlers[type] = handler; },
+    querySelector: () => ({ outerHTML: '' })
+};
+
+mountLog(root);
+handlers.change({ target: { id: 'log-date', value: '2026-08-04' } });      // wtorek
+handlers.click({ target: mockButton('js-start', { type: 'strength' }) });
+
+check('log: render zawiera undefined', !root.innerHTML.includes('undefined'));
+check('log: brak przycisku kopiowania serii', root.innerHTML.includes('js-copy'));
+/* Pierwsza seria każdego ćwiczenia nie ma z czego kopiować — dokładnie tyle
+   wyłączonych przycisków, ile ćwiczeń w dniu. */
+const exerciseCount = plan.days.find(day => day.key === 'tuesday').exercises.length;
+const disabledCopy = (root.innerHTML.match(/js-copy[^>]*?disabled/gs) || []).length;
+check('złe wyłączenie kopiowania w pierwszej serii', disabledCopy === exerciseCount, disabledCopy);
+check('log: brak pływającego timera', root.innerHTML.includes('rest-timer'));
+check('log: timer nadal siedzi w nagłówku', !root.innerHTML.includes('class="timer"'));
+check('log: brak wskazówki technicznej z planu',
+    root.innerHTML.includes('Stopy wysoko i szeroko'), root.innerHTML.slice(0, 200));
+
+function mockButton(className, dataset = {}) {
+    const classes = new Set([className]);
+    const element = {
+        tagName: 'BUTTON',
+        dataset,
+        classList: { contains: name => classes.has(name) },
+        closest: selector => (selector === 'button' ? element : null)
+    };
+    return element;
+}
 
 /* ---------- PWA ---------- */
 

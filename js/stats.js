@@ -69,6 +69,28 @@ export function bestE1RM(exerciseId, sessions) {
     return values.length ? Math.max(...values) : 0;
 }
 
+/* Oznaczenie rekordu dla kolejnych serii jednego ćwiczenia w sesji.
+
+   Rekord musi bić wszystko, co było wcześniej — również wcześniejsze serie tego
+   samego treningu, stąd bieżące maksimum przesuwane w trakcie przebiegu.
+   Porównywanie każdej serii wyłącznie do wyniku sprzed sesji dawało „PR” przy
+   każdej kolejnej serii, nawet gdy była słabsza od pierwszej.
+
+   Bez wcześniejszej historii nie ma czego bić, więc pierwsze serie w życiu
+   rekordami nie są. */
+export function markRecords(sets, previousBest = 0) {
+    let best = previousBest;
+    const hasHistory = previousBest > 0;
+
+    return sets.map(set => {
+        const estimated = set.done ? epley1RM(set.weight, set.reps) : null;
+        const isRecord = hasHistory && estimated != null && estimated > best;
+
+        if (estimated != null) best = Math.max(best, estimated);
+        return { isRecord, estimated };
+    });
+}
+
 /* ---------- Objętość ---------- */
 
 /* Objętość serii: ciężar × powtórzenia, razem z dropsetem — dropset to

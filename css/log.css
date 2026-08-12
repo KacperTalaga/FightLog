@@ -103,30 +103,59 @@
     border-color: var(--text-dim);
 }
 
-/* ---------- Timer ---------- */
+/* ---------- Timer odpoczynku ---------- */
 
-.timer {
+/* Pływa nad tab barem, żeby był w zasięgu kciuka niezależnie od tego,
+   jak daleko przewinięta jest lista ćwiczeń. */
+.rest-timer {
+    position: fixed;
+    right: var(--space-3);
+    bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + var(--space-3));
+    z-index: 90;
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    align-items: flex-end;
     gap: var(--space-2);
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: var(--space-2) var(--space-3);
-    margin-bottom: var(--space-4);
 }
 
-.timer__display {
-    flex: 1;
-    font-size: var(--fs-lg);
+.rest-timer__presets {
+    display: none;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.rest-timer.is-open .rest-timer__presets {
+    display: flex;
+}
+
+.rest-timer__presets .chip {
+    background: var(--surface);
+    min-width: 64px;
+}
+
+.rest-timer__toggle {
+    min-height: var(--tap);
+    padding: 0 var(--space-4);
+    background: var(--surface);
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+    border-radius: 22px;
+    font-size: var(--fs-md);
     font-weight: 700;
     font-variant-numeric: tabular-nums;
-    color: var(--text-dim);
+    cursor: pointer;
+    transition: color var(--transition), border-color var(--transition);
+}
+
+.rest-timer__toggle.is-running {
+    color: var(--text);
+    border-color: var(--cardio);
 }
 
 /* Wibracja nie działa w Safari na iOS, więc koniec odliczania musi być widać. */
-.timer__display.is-finished {
+.rest-timer__toggle.is-finished {
     color: var(--success);
+    border-color: var(--success);
 }
 
 /* ---------- Karta ćwiczenia ---------- */
@@ -168,6 +197,12 @@
     gap: var(--space-2);
 }
 
+/* Trzy przyciski i dwa pola nie mieszczą się w jednej linii na wąskim
+   telefonie — wolimy zawinięcie niż ściskanie tap targetów poniżej 44 px. */
+.set__main {
+    flex-wrap: wrap;
+}
+
 .set__drop {
     margin-top: var(--space-2);
     padding-left: var(--space-5);
@@ -183,7 +218,7 @@
 
 .set__input {
     flex: 1;
-    min-width: 0;
+    min-width: 64px;
     min-height: var(--tap);
     background: var(--surface-2);
     border: 1px solid var(--border);
@@ -226,6 +261,11 @@
 .set__btn.is-active {
     color: var(--cardio);
     border-color: var(--cardio);
+}
+
+.set__btn:disabled {
+    opacity: 0.35;
+    cursor: default;
 }
 
 .set.is-done .set__btn--done {
