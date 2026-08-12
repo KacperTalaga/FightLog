@@ -9,8 +9,8 @@ import {
     getPlan, getSessions, getSession, getSessionIds,
     saveSession, deleteSession, getLatestWeight, getSettings
 } from '../store.js';
-import { buildSessionForDay, buildExtraSet, SESSION_TYPES } from '../data/session.js';
-import { suggestNext, formatLast, formatSuggestion } from '../progression.js';
+import { buildSessionForDay, buildExtraSet, addedFrom, resolveBodyweight, SESSION_TYPES } from '../data/session.js';
+import { suggestNext, formatLast, formatSuggestion, machinesFor } from '../progression.js';
 import { bestE1RM, markRecords } from '../stats.js';
 import { createRestTimer, formatClock, REST_PRESETS } from '../timer.js';
 
@@ -55,19 +55,26 @@ function loadDate(date) {
 
 /* Sugestie liczymy z historii BEZ bieżącej sesji — inaczej dzisiejsze wpisy
    podnosiłyby własną sugestię w trakcie treningu. */
+/* Iterujemy po ćwiczeniach sesji, a nie planu — tylko sesja wie, na jakiej
+   maszynie ćwiczysz dzisiaj, a od tego zależy cała historia i sugestia. */
 function buildSuggestions() {
     const history = getSessions().filter(item => item.id !== session.id);
     const bodyweightKg = getLatestWeight();
     const day = planDayFor(selectedDate);
     const result = {};
 
-    for (const exercise of day.exercises) {
-        result[exercise.id] = {
-            ...suggestNext(exercise, history, { bodyweightKg }),
+    for (const entry of session.exercises ?? []) {
+        const exercise = day.exercises.find(item => item.id === entry.id);
+        if (!exercise) continue;
+
+        const machine = entry.machine ?? null;
+        result[entry.id] = {
+            ...suggestNext(exercise, history, { bodyweightKg, machine }),
             exercise,
             bodyweightKg,
-            /* Rekord sprzed dzisiejszej sesji — do oznaczania nowego PR w wierszu. */
-            best1RM: bestE1RM(exercise.id, history)
+            machines: machinesFor(entry.id, history),
+            /* Rekord sprzed dzisiejszej sesji, na tym samym sprzęcie. */
+            best1RM: bestE1RM(entry.id, history, machine)
         };
     }
     return result;
@@ -170,12 +177,57 @@ function renderExerciseCard(entry) {
             <input class="field__input field__input--inline" type="text" data-field="exerciseNote"
                 placeholder="Notatka do ćwiczenia" value="${escapeHtml(entry.note ?? '')}">
         </div>
+        ${renderMachineField(entry, suggestion)}
     </section>`;
+}
+
+/* Pole z listą podpowiedzi zamiast selecta: nową maszynę wpisujesz od ręki,
+   a wcześniej używane wybierasz z rozwijanej listy — jedna kontrolka na oba. */
+function renderMachineField(entry, suggestion) {
+    const listId = `machines-${entry.id}`;
+    const options = (suggestion?.machines ?? [])
+        .map(name => `<option value="${escapeHtml(name)}"></option>`).join('');
+
+    return `
+    <div class="ex-card__machine">
+        <label class="ex-card__machine-label" for="machine-${escapeHtml(entry.id)}">Sprzęt</label>
+        <input class="field__input field__input--inline" id="machine-${escapeHtml(entry.id)}" type="text"
+            data-field="machine" list="${listId}" placeholder="np. maszyna A / wolne ciężary"
+            value="${escapeHtml(entry.machine ?? '')}">
+        <datalist id="${listId}">${options}</datalist>
+    </div>`;
 }
 
 function renderSets(entry, suggestion) {
     const records = markRecords(entry.sets, suggestion?.best1RM ?? 0);
     return entry.sets.map((set, index) => renderSet(set, index, entry, records[index])).join('');
+}
+
+/* Masa ciała z dnia treningu. Sesje sprzed tej funkcji nie mają migawki —
+   wtedy sięgamy po najświeższy pomiar i go zapamiętujemy. */
+function sessionBodyweight() {
+    if (session.bodyweightKg == null) session.bodyweightKg = getLatestWeight();
+    return session.bodyweightKg;
+}
+
+/* Przy ćwiczeniu z masy ciała wpisuje się samą dokładkę, nie ciężar bezwzględny.
+   Starsze sesje mają tylko weight, więc dokładkę odtwarzamy z różnicy. */
+function renderWeightField(set, entry) {
+    if (!entry.bodyweight) {
+        return `<input class="set__input" type="text" inputmode="decimal" data-field="weight"
+            placeholder="${set.plannedWeight ?? ''}" value="${set.weight ?? ''}" aria-label="Ciężar">`;
+    }
+
+    const bodyweightKg = sessionBodyweight();
+    const added = set.added ?? addedFrom(set.weight, bodyweightKg);
+    const title = bodyweightKg == null
+        ? 'Brak wpisu wagi — uzupełnij w zakładce Dieta, żeby liczyć 1RM'
+        : `Masa ciała: ${bodyweightKg} kg`;
+
+    return `
+        <span class="set__bw${bodyweightKg == null ? ' is-warn' : ''}" title="${escapeHtml(title)}">BW</span>
+        <input class="set__input set__input--added" type="text" inputmode="decimal" data-field="added"
+            placeholder="+${set.plannedAdded ?? 0}" value="${added ?? ''}" aria-label="Obciążenie dodatkowe">`;
 }
 
 function renderSet(set, index, entry, record) {
@@ -185,8 +237,7 @@ function renderSet(set, index, entry, record) {
     <div class="set${set.done ? ' is-done' : ''}" data-index="${index}">
         <div class="set__main">
             <span class="set__no">${index + 1}</span>
-            <input class="set__input" type="text" inputmode="decimal" data-field="weight"
-                placeholder="${set.plannedWeight ?? ''}" value="${set.weight ?? ''}" aria-label="Ciężar">
+            ${renderWeightField(set, entry)}
             <span class="set__x">×</span>
             <input class="set__input" type="text" inputmode="numeric" data-field="reps"
                 placeholder="${repsPlaceholder}" value="${set.reps ?? ''}" aria-label="Powtórzenia">
@@ -305,6 +356,12 @@ function handleInput(event) {
         if (!set) return;
 
         if (field === 'weight') set.weight = parseNumber(value);
+        /* Dokładka jest tym, co widzi użytkownik; weight liczymy z niej,
+           bo to on idzie do 1RM i objętości. */
+        if (field === 'added') {
+            set.added = parseNumber(value);
+            resolveBodyweight(set, sessionBodyweight());
+        }
         if (field === 'reps') set.reps = roundReps(parseNumber(value));
         if (field === 'dropWeight' && set.dropset) set.dropset.weight = parseNumber(value);
         if (field === 'dropReps' && set.dropset) set.dropset.reps = roundReps(parseNumber(value));
@@ -318,7 +375,37 @@ function roundReps(value) {
 }
 
 function handleChange(event) {
-    if (event.target.id === 'log-date') loadDate(event.target.value);
+    if (event.target.id === 'log-date') return loadDate(event.target.value);
+    if (event.target.dataset.field === 'machine') changeMachine(event.target);
+}
+
+/* Zmiana sprzętu przełącza historię, więc sugestie trzeba przeliczyć.
+   Obsługujemy to na 'change', a nie 'input' — przeliczanie po każdej literze
+   przerysowywałoby kartę i zabierało fokus z pola. */
+function changeMachine(input) {
+    const entry = entryFrom(input);
+    if (!entry) return;
+
+    entry.machine = input.value.trim() || null;
+    suggestions = buildSuggestions();
+    applySuggestionToEmptySets(entry, suggestions[entry.id]);
+
+    refreshExercise(entry.id);
+    scheduleSave();
+}
+
+/* Nadpisujemy wyłącznie serie jeszcze niedotknięte — wpisany wynik jest faktem
+   i nie może zniknąć przez zmianę maszyny. */
+function applySuggestionToEmptySets(entry, suggestion) {
+    if (!suggestion) return;
+
+    for (const set of entry.sets) {
+        if (set.done || set.weight != null || set.reps != null) continue;
+
+        set.plannedWeight = suggestion.weight;
+        set.plannedReps = suggestion.reps;
+        set.plannedAdded = entry.bodyweight ? addedFrom(suggestion.weight, suggestion.bodyweightKg) : null;
+    }
 }
 
 function handleClick(event) {
@@ -397,6 +484,11 @@ function toggleDone(button) {
     if (set.done && set.weight == null && set.reps == null) {
         set.weight = set.plannedWeight;
         set.reps = set.plannedReps;
+
+        if (entry.bodyweight) {
+            set.added = set.plannedAdded ?? 0;
+            resolveBodyweight(set, sessionBodyweight());
+        }
     }
 
     refreshExercise(entry.id);
@@ -414,6 +506,11 @@ function copyPreviousSet(button) {
     const set = entry.sets[index];
     set.weight = previous.weight ?? previous.plannedWeight;
     set.reps = previous.reps ?? previous.plannedReps;
+
+    if (entry.bodyweight) {
+        set.added = previous.added ?? previous.plannedAdded ?? 0;
+        resolveBodyweight(set, sessionBodyweight());
+    }
 
     refreshExercise(entry.id);
     scheduleSave();

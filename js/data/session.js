@@ -18,20 +18,40 @@ export function nextSessionId(date, existingIds = []) {
     return `${date}_${suffix}`;
 }
 
+/* Obciążenie dołożone ponad masę ciała. Rozdzielamy je od ciężaru bezwzględnego,
+   bo przy podciąganiu chcesz wpisać „+5”, a nie 80.9 — ale do 1RM i objętości
+   i tak potrzebna jest liczba bezwzględna. */
+export function addedFrom(absoluteWeight, bodyweightKg) {
+    if (absoluteWeight == null || bodyweightKg == null) return null;
+    return Math.round((absoluteWeight - bodyweightKg) * 10) / 10;
+}
+
+/* Odwrotność: masa ciała + dokładka. Zapisujemy wynik do weight, żeby reszta
+   aplikacji nie musiała wiedzieć, że to ćwiczenie z masy ciała. */
+export function resolveBodyweight(set, bodyweightKg) {
+    set.weight = bodyweightKg == null
+        ? null
+        : Math.round((bodyweightKg + (set.added ?? 0)) * 10) / 10;
+    return set;
+}
+
 /* Wartości planowane biorą się z silnika progresji, jeśli został podany.
    Bez niego (albo bez historii) spadamy na ciężar startowy z planu. */
 function buildSets(exercise, bodyweightKg, suggest) {
     const suggestion = suggest ? suggest(exercise) : null;
     const plannedWeight = suggestion ? suggestion.weight : baseWeight(exercise, bodyweightKg);
     const plannedReps = suggestion ? suggestion.reps : exercise.repRange[0];
+    const plannedAdded = exercise.bodyweight ? addedFrom(plannedWeight, bodyweightKg) : null;
 
     /* Array.from z funkcją, a nie fill(obiekt) — fill wstawiłby wszędzie
        tę samą referencję i wpisanie ciężaru w serii 1 zmieniłoby wszystkie. */
     return Array.from({ length: exercise.sets }, () => ({
         plannedWeight,
         plannedReps,
+        plannedAdded,
         weight: null,
         reps: null,
+        added: null,
         dropset: null,
         done: false
     }));
@@ -47,6 +67,9 @@ export function buildStrengthSession(day, options = {}) {
         dayKey: day.key,
         type: SESSION_TYPES.STRENGTH,
         planVersion,
+        /* Migawka masy ciała z dnia treningu — późniejsza zmiana wagi nie może
+           przepisywać wstecz ciężarów w zapisanych sesjach. */
+        bodyweightKg,
         note: '',
         createdAt: now,
         updatedAt: now,
@@ -57,6 +80,9 @@ export function buildStrengthSession(day, options = {}) {
             bodyweight: exercise.bodyweight,
             perSide: exercise.perSide,
             unit: exercise.unit,
+            /* Wariant sprzętu. Ten sam ruch na innej maszynie ma inne
+               obciążenia, więc historia jest prowadzona osobno. */
+            machine: null,
             note: '',
             sets: buildSets(exercise, bodyweightKg, suggest)
         }))
@@ -91,8 +117,10 @@ export function buildExtraSet(previousSet) {
     return {
         plannedWeight: previousSet?.plannedWeight ?? null,
         plannedReps: previousSet?.plannedReps ?? null,
+        plannedAdded: previousSet?.plannedAdded ?? null,
         weight: null,
         reps: null,
+        added: null,
         dropset: null,
         done: false
     };

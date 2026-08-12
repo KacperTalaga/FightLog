@@ -13,7 +13,8 @@ import { lineChart, barChart, calendarHeatmap } from '../chart.js';
 const MODES = { E1RM: 'e1rm', VOLUME: 'volume' };
 const METER_SCALE = 25;              // górna granica skali wykresu serii
 
-let selectedExercise = null;
+/* Wybór dotyczy wariantu (ćwiczenie + sprzęt), nie samego ćwiczenia. */
+let selectedVariant = null;
 let mode = MODES.E1RM;
 
 export function mountProgress(container) {
@@ -39,9 +40,9 @@ function render() {
         ${renderCalendar(sessions)}`;
     }
 
-    /* Wybór z poprzedniego wejścia zostaje, o ile ćwiczenie nadal ma historię. */
-    if (!exercises.some(exercise => exercise.id === selectedExercise)) {
-        selectedExercise = exercises[0].id;
+    /* Wybór z poprzedniego wejścia zostaje, o ile wariant nadal ma historię. */
+    if (!exercises.some(exercise => exercise.key === selectedVariant)) {
+        selectedVariant = exercises[0].key;
     }
 
     return `
@@ -49,8 +50,8 @@ function render() {
     <section class="panel">
         <select class="field__input" id="progress-exercise" aria-label="Ćwiczenie">
             ${exercises.map(exercise => `
-                <option value="${escapeHtml(exercise.id)}"${exercise.id === selectedExercise ? ' selected' : ''}>
-                    ${escapeHtml(exercise.name)}
+                <option value="${escapeHtml(exercise.key)}"${exercise.key === selectedVariant ? ' selected' : ''}>
+                    ${escapeHtml(exercise.label)}
                 </option>`).join('')}
         </select>
         <div class="chips chips--spread">
@@ -67,13 +68,16 @@ function render() {
 /* ---------- Wykres ---------- */
 
 function renderChart(sessions) {
+    const variant = exercisesWithHistory(sessions).find(item => item.key === selectedVariant);
+    if (!variant) return '';
+
     if (mode === MODES.VOLUME) {
-        const points = weeklyVolumeSeries(selectedExercise, sessions);
+        const points = weeklyVolumeSeries(variant.id, sessions, variant.machine);
         return barChart(points, { title: 'Objętość tygodniowa' })
             + '<p class="chart-caption">Serie × powtórzenia × ciężar, sumowane w tygodniach (z dropsetami).</p>';
     }
 
-    const points = oneRepMaxSeries(selectedExercise, sessions);
+    const points = oneRepMaxSeries(variant.id, sessions, variant.machine);
     const last = points.at(-1);
 
     return lineChart(points, { title: 'Estymowany rekord jednego powtórzenia' })
@@ -130,7 +134,7 @@ function renderRecords(sessions) {
             <tbody>
                 ${records.map(record => `
                 <tr>
-                    <td>${escapeHtml(record.name)}</td>
+                    <td>${escapeHtml(record.label)}</td>
                     <td class="table__num">${record.weight} × ${record.reps}</td>
                     <td class="table__num">${record.e1rm} kg</td>
                     <td class="table__num">${shortDate(record.date)}</td>
@@ -167,7 +171,7 @@ function refreshChart() {
 function handleChange(event) {
     if (event.target.id !== 'progress-exercise') return;
 
-    selectedExercise = event.target.value;
+    selectedVariant = event.target.value;
     refreshChart();
 }
 

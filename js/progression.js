@@ -41,16 +41,33 @@ function roundToStep(value, step) {
 }
 
 /* Historia ćwiczenia: sesje siłowe, w których choć jedna seria została
-   wykonana, od najstarszej do najnowszej. */
-export function exerciseHistory(exerciseId, sessions) {
+   wykonana, od najstarszej do najnowszej.
+
+   Filtrujemy po wariancie sprzętu: leg press na dwóch różnych maszynach to
+   dwie różne skale obciążenia, więc wspólna historia dawałaby sugestie
+   z sufitu i rekordy, których nigdy nie było. */
+export function exerciseHistory(exerciseId, sessions, machine = null) {
     return sessions
         .filter(session => session.type === 'strength' && Array.isArray(session.exercises))
         .map(session => {
             const entry = session.exercises.find(item => item.id === exerciseId);
-            return entry ? { date: session.date, sets: performedSets(entry), total: entry.sets.length } : null;
+            if (!entry || (entry.machine ?? null) !== machine) return null;
+
+            return { date: session.date, sets: performedSets(entry), total: entry.sets.length };
         })
         .filter(item => item && item.sets.length > 0)
         .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+/* Warianty sprzętu użyte wcześniej przy tym ćwiczeniu — podpowiedzi w logu. */
+export function machinesFor(exerciseId, sessions) {
+    const names = new Set();
+
+    for (const session of sessions) {
+        const entry = session.exercises?.find(item => item.id === exerciseId);
+        if (entry?.machine) names.add(entry.machine);
+    }
+    return [...names].sort((a, b) => a.localeCompare(b, 'pl'));
 }
 
 /* Tydzień treningowy liczony od pierwszej zapisanej sesji, numerowany od 1. */
@@ -80,9 +97,9 @@ function isStagnant(history) {
  *            deload: boolean, last: {weight: number|null, reps: number, date: string}|null}}
  */
 export function suggestNext(exercise, sessions, options = {}) {
-    const { bodyweightKg = null, today = new Date() } = options;
+    const { bodyweightKg = null, today = new Date(), machine = null } = options;
     const [minReps, maxReps] = exercise.repRange;
-    const history = exerciseHistory(exercise.id, sessions);
+    const history = exerciseHistory(exercise.id, sessions, machine);
     const deload = isDeloadWeek(sessions, today);
 
     const result = {

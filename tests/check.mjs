@@ -35,7 +35,7 @@ const store = await load('js/store.js');
 const progression = await load('js/progression.js');
 const stats = await load('js/stats.js');
 const nutrition = await load('js/nutrition.js');
-const { buildSessionForDay } = await load('js/data/session.js');
+const { buildSessionForDay, addedFrom, resolveBodyweight } = await load('js/data/session.js');
 
 /* ---------- Daty ---------- */
 
@@ -69,17 +69,42 @@ check('dropset nie startuje jako null', pullup.sets[0].dropset === null, pullup.
 pullup.sets[0].weight = 100;
 check('sety współdzielą referencję', pullup.sets[1].weight === null, pullup.sets[1].weight);
 
+/* ---------- Ćwiczenia z masy ciała ---------- */
+
+check('sesja nie zapamiętała masy ciała', session.bodyweightKg === 79, session.bodyweightKg);
+check('BW: brak planowanej dokładki', pullup.sets[1].plannedAdded === 0, pullup.sets[1].plannedAdded);
+check('BW: dokładka nie startuje pusta', pullup.sets[1].added === null, pullup.sets[1].added);
+
+const bwSet = { added: null, weight: null };
+resolveBodyweight(bwSet, 75.9);
+check('BW bez dokładki != masa ciała', bwSet.weight === 75.9, bwSet.weight);
+
+bwSet.added = 5;
+resolveBodyweight(bwSet, 75.9);
+check('BW z dokładką źle policzone', bwSet.weight === 80.9, bwSet.weight);
+
+bwSet.added = -10;                       // guma/asysta
+resolveBodyweight(bwSet, 75.9);
+check('BW z asystą źle policzone', bwSet.weight === 65.9, bwSet.weight);
+
+resolveBodyweight(bwSet, null);
+check('BW bez wpisu wagi powinno dać null', bwSet.weight === null, bwSet.weight);
+
+check('odtworzenie dokładki ze starej sesji', addedFrom(80.9, 75.9) === 5, addedFrom(80.9, 75.9));
+check('odtworzenie dokładki bez masy ciała', addedFrom(80.9, null) === null);
+
 /* ---------- Silnik progresji ---------- */
 
 const bench = { id: 'bench', sets: 4, repRange: [6, 10], startWeight: 70, increment: 2.5, bodyweight: false, unit: 'powt' };
 const today = new Date(2026, 7, 4);
 /* Sesja ma tyle setów, ile przewiduje plan — niewykonane zostają puste.
    Bez tego dopełnienia „3 z 4 serii” wyglądałoby jak komplet. */
-const mockSession = (date, rows, planned = bench.sets) => ({
+const mockSession = (date, rows, planned = bench.sets, machine = null) => ({
     id: date, date, type: 'strength',
     exercises: [{
         id: 'bench',
         name: 'Wyciskanie',
+        machine,
         sets: rows.map(([weight, reps]) => ({ weight, reps, dropset: null, done: true }))
             .concat(Array.from({ length: Math.max(planned - rows.length, 0) },
                 () => ({ weight: null, reps: null, dropset: null, done: false })))
@@ -99,6 +124,47 @@ check('trzy serie z czterech podbiły ciężar', partial.weight === 70, partial.
 
 const fresh = progression.suggestNext(bench, [], { today });
 check('brak historii nie startuje z planu', fresh.weight === 70 && fresh.reps === 6, fresh);
+
+/* ---------- Warianty sprzętu ---------- */
+
+/* Sedno funkcji: historia z jednej maszyny nie może podpowiadać ciężarów
+   na drugiej ani produkować rekordów, których na niej nie było. */
+const machineHistory = [
+    mockSession('2026-07-21', [[100, 10], [100, 10], [100, 10], [100, 10]], 4, 'Maszyna A'),
+    mockSession('2026-07-28', [[60, 8], [60, 8], [60, 8], [60, 8]], 4, 'Maszyna B')
+];
+
+const onA = progression.suggestNext(bench, machineHistory, { today, machine: 'Maszyna A' });
+check('sugestia dla maszyny A nie z jej historii', onA.weight === 102.5, onA.weight);
+
+const onB = progression.suggestNext(bench, machineHistory, { today, machine: 'Maszyna B' });
+check('historia maszyny A wyciekła na maszynę B', onB.weight === 60, onB.weight);
+check('maszyna B: złe "ostatnio"', onB.last?.reps === 8, onB.last);
+
+const onNew = progression.suggestNext(bench, machineHistory, { today, machine: 'Maszyna C' });
+check('nieznana maszyna nie startuje z planu', onNew.weight === 70 && onNew.source === 'plan', onNew);
+
+const withoutMachine = progression.suggestNext(bench, machineHistory, { today });
+check('sesje z maszyn wyciekły do wariantu bez sprzętu',
+    withoutMachine.source === 'plan', withoutMachine.source);
+
+check('lista maszyn niekompletna',
+    progression.machinesFor('bench', machineHistory).join() === 'Maszyna A,Maszyna B',
+    progression.machinesFor('bench', machineHistory));
+
+const machineRecords = stats.personalRecords(machineHistory);
+check('rekordy nie rozdzielone per maszyna', machineRecords.length === 2, machineRecords.length);
+check('rekord bez nazwy sprzętu',
+    machineRecords.some(record => record.label === 'Wyciskanie — Maszyna A'), machineRecords.map(r => r.label));
+check('rekord maszyny B zawyżony',
+    machineRecords.find(record => record.machine === 'Maszyna B').weight === 60,
+    machineRecords.find(record => record.machine === 'Maszyna B'));
+
+check('1RM dla maszyny A miesza dane',
+    stats.oneRepMaxSeries('bench', machineHistory, 'Maszyna A').length === 1);
+check('warianty nie rozdzielone na wykresie',
+    stats.exercisesWithHistory(machineHistory).length === 2,
+    stats.exercisesWithHistory(machineHistory).map(item => item.label));
 
 /* ---------- Statystyki ---------- */
 
@@ -173,6 +239,29 @@ check('log: brak pływającego timera', root.innerHTML.includes('rest-timer'));
 check('log: timer nadal siedzi w nagłówku', !root.innerHTML.includes('class="timer"'));
 check('log: brak wskazówki technicznej z planu',
     root.innerHTML.includes('Stopy wysoko i szeroko'), root.innerHTML.slice(0, 200));
+check('log: brak pola sprzętu', root.innerHTML.includes('data-field="machine"'));
+check('log: brak listy podpowiedzi sprzętu', root.innerHTML.includes('<datalist'));
+check('log: brak znacznika BW przy podciąganiu', root.innerHTML.includes('set__bw'));
+check('log: brak pola dokładki', root.innerHTML.includes('data-field="added"'));
+
+/* Zmiana sprzętu przelicza sugestie tylko dla serii jeszcze niedotkniętych. */
+const stored = store.getSession('2026-08-04');
+const legPress = stored.exercises.find(item => item.id === 'leg-press');
+check('sesja: brak pola sprzętu', legPress.machine === null, legPress.machine);
+check('sesja: brak migawki masy ciała', 'bodyweightKg' in stored, Object.keys(stored));
+
+/* ---------- Widok progresji ---------- */
+
+const { mountProgress } = await load('js/views/progress.js');
+
+machineHistory.forEach(item => store.saveSession(item));
+const progressRoot = { innerHTML: '', dataset: {}, addEventListener: () => {} };
+mountProgress(progressRoot);
+
+check('progresja: render zawiera undefined', !progressRoot.innerHTML.includes('undefined'));
+check('progresja: brak wykresu', progressRoot.innerHTML.includes('<svg'));
+check('progresja: warianty sprzętu nie w wyborze',
+    progressRoot.innerHTML.includes('Wyciskanie — Maszyna A'), progressRoot.innerHTML.slice(0, 400));
 
 function mockButton(className, dataset = {}) {
     const classes = new Set([className]);

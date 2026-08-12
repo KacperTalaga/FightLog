@@ -26,16 +26,35 @@ export function strengthSessions(sessions) {
         .sort((a, b) => a.date.localeCompare(b.date));
 }
 
-/* Ćwiczenia, dla których jest co pokazać na wykresie. */
+/* Klucz wariantu: ćwiczenie plus sprzęt. Ten sam ruch na innej maszynie ma
+   inną skalę obciążenia, więc na wykresach i w rekordach żyje osobno. */
+export function variantKey(exerciseId, machine) {
+    return `${exerciseId}::${machine ?? ''}`;
+}
+
+function variantLabel(name, machine) {
+    return machine ? `${name} — ${machine}` : name;
+}
+
+/* Warianty, dla których jest co pokazać na wykresie. */
 export function exercisesWithHistory(sessions) {
     const found = new Map();
 
     for (const session of strengthSessions(sessions)) {
         for (const entry of session.exercises) {
-            if (performedSets(entry).length) found.set(entry.id, entry.name);
+            if (!performedSets(entry).length) continue;
+
+            const machine = entry.machine ?? null;
+            found.set(variantKey(entry.id, machine), {
+                key: variantKey(entry.id, machine),
+                id: entry.id,
+                machine,
+                name: entry.name,
+                label: variantLabel(entry.name, machine)
+            });
         }
     }
-    return [...found].map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name, 'pl'));
+    return [...found.values()].sort((a, b) => a.label.localeCompare(b.label, 'pl'));
 }
 
 /* ---------- Wykres 1RM ---------- */
@@ -50,12 +69,12 @@ export function bestE1RMOf(entry) {
     return values.length ? Math.max(...values) : null;
 }
 
-export function oneRepMaxSeries(exerciseId, sessions) {
+export function oneRepMaxSeries(exerciseId, sessions, machine = null) {
     const points = [];
 
     for (const session of strengthSessions(sessions)) {
         const entry = session.exercises.find(item => item.id === exerciseId);
-        if (!entry) continue;
+        if (!entry || (entry.machine ?? null) !== machine) continue;
 
         const best = bestE1RMOf(entry);
         if (best != null) points.push({ label: session.date, value: round1(best) });
@@ -64,8 +83,8 @@ export function oneRepMaxSeries(exerciseId, sessions) {
 }
 
 /* Najlepszy dotychczasowy 1RM — do oznaczania nowego rekordu w logu. */
-export function bestE1RM(exerciseId, sessions) {
-    const values = oneRepMaxSeries(exerciseId, sessions).map(point => point.value);
+export function bestE1RM(exerciseId, sessions, machine = null) {
+    const values = oneRepMaxSeries(exerciseId, sessions, machine).map(point => point.value);
     return values.length ? Math.max(...values) : 0;
 }
 
@@ -110,12 +129,12 @@ export function volumeOfEntry(entry) {
 }
 
 /* exerciseId === null → objętość całego treningu. */
-export function weeklyVolumeSeries(exerciseId, sessions) {
+export function weeklyVolumeSeries(exerciseId, sessions, machine = null) {
     const byWeek = new Map();
 
     for (const session of strengthSessions(sessions)) {
         const entries = exerciseId
-            ? session.exercises.filter(entry => entry.id === exerciseId)
+            ? session.exercises.filter(entry => entry.id === exerciseId && (entry.machine ?? null) === machine)
             : session.exercises;
 
         const volume = entries.reduce((sum, entry) => sum + volumeOfEntry(entry), 0);
@@ -141,12 +160,16 @@ export function personalRecords(sessions) {
                 const value = epley1RM(set.weight, set.reps);
                 if (value == null) continue;
 
-                const current = best.get(entry.id);
+                const machine = entry.machine ?? null;
+                const key = variantKey(entry.id, machine);
+                const current = best.get(key);
                 if (current && value <= current.e1rm) continue;
 
-                best.set(entry.id, {
+                best.set(key, {
                     id: entry.id,
+                    machine,
                     name: entry.name,
+                    label: variantLabel(entry.name, machine),
                     weight: set.weight,
                     reps: set.reps,
                     date: session.date,
