@@ -1,8 +1,13 @@
 /* Service worker — offline i aktualizacje.
 
-   Podnieś CACHE_NAME przy każdym wdrożeniu. Strategia cache-first oznacza,
-   że bez zmiany nazwy cache'a przeglądarka będzie serwowała stare pliki
-   w nieskończoność. */
+   CACHE_NAME nie wymaga podnoszenia przy wdrożeniach. Szkielet jest serwowany
+   strategią stale-while-revalidate: strona startuje natychmiast z cache'a,
+   a w tle każdy plik jest sprawdzany warunkowo (ETag). Gdy serwer odda inną
+   wersję, cache się aktualizuje i aplikacja pokazuje toast o nowej wersji.
+
+   Poprzednia strategia (cache-first z ręcznym wersjonowaniem) wymagała
+   pamiętania o podbiciu numeru przy każdym deployu — jedno zapomnienie
+   i przeglądarka serwowała starą wersję w nieskończoność. */
 
 const CACHE_NAME = 'fightlog-v1';
 
@@ -91,9 +96,34 @@ self.addEventListener('fetch', event => {
     }
 
     if (url.origin === self.location.origin) {
-        event.respondWith(cacheFirst(request));
+        event.respondWith(staleWhileRevalidate(event));
     }
 });
+
+/* ---------- Wykrywanie nowej wersji ---------- */
+
+let updateAnnounced = false;
+
+/* Jedno powiadomienie na cykl życia workera — przy 30 plikach szkieletu
+   użytkownik dostałby inaczej 30 identycznych toastów. */
+async function announceUpdate() {
+    if (updateAnnounced) return;
+    updateAnnounced = true;
+
+    const clients = await self.clients.matchAll({ type: 'window' });
+    clients.forEach(client => client.postMessage({ type: 'CONTENT_UPDATED' }));
+}
+
+/* Porównujemy walidatory HTTP. Gdy serwer nie daje żadnego, wolimy milczeć niż
+   ogłaszać aktualizację przy każdym odświeżeniu. */
+function hasChanged(cached, fresh) {
+    for (const header of ['etag', 'last-modified', 'content-length']) {
+        const before = cached.headers.get(header);
+        const after = fresh.headers.get(header);
+        if (before && after) return before !== after;
+    }
+    return false;
+}
 
 async function putInCache(request, response) {
     /* Tylko pełne odpowiedzi 200. Zbuforowany błąd 404 albo odpowiedź
@@ -105,21 +135,35 @@ async function putInCache(request, response) {
     return response;
 }
 
-async function cacheFirst(request) {
+async function staleWhileRevalidate(event) {
+    const request = event.request;
     const cached = await caches.match(request);
-    if (cached) return cached;
 
-    try {
-        return await putInCache(request, await fetch(request));
-    } catch (error) {
-        /* Offline i pudło w cache'u: wejście w dowolny adres w obrębie
-           aplikacji ma pokazać powłokę, a nie błąd przeglądarki. */
-        if (request.mode === 'navigate') {
-            const shell = await caches.match('./index.html');
-            if (shell) return shell;
-        }
-        throw error;
+    const fromNetwork = fetch(request)
+        .then(async response => {
+            if (cached && hasChanged(cached, response)) await announceUpdate();
+            return putInCache(request, response);
+        })
+        .catch(() => null);
+
+    if (cached) {
+        /* Odpowiadamy z cache'a natychmiast, ale przeglądarka nie może ubić
+           workera przed dokończeniem odświeżenia w tle. */
+        event.waitUntil(fromNetwork);
+        return cached;
     }
+
+    const response = await fromNetwork;
+    if (response) return response;
+
+    /* Offline i pudło w cache'u: wejście w dowolny adres w obrębie aplikacji
+       ma pokazać powłokę, a nie błąd przeglądarki. */
+    if (request.mode === 'navigate') {
+        const shell = await caches.match('./index.html');
+        if (shell) return shell;
+    }
+
+    return Response.error();
 }
 
 async function networkFirst(request) {

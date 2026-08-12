@@ -100,19 +100,19 @@ dole ekranu zamiast cichego błędu w konsoli.
 Safari → otwórz `fightlog.pages.dev` → przycisk udostępniania → **Dodaj do ekranu
 głównego**. Aplikacja startuje wtedy bez paska Safari i działa w trybie samolotowym.
 
-### Wersjonowanie cache'a — ważne przy każdym wdrożeniu
+### Aktualizacje — nic nie trzeba robić
 
-`sw.js` serwuje szkielet aplikacji strategią **cache-first**. Oznacza to, że po
-wdrożeniu zmian przeglądarka będzie pokazywała starą wersję, dopóki nie zmieni
-się nazwa cache'a. **Przy każdym wdrożeniu podnieś `CACHE_NAME`** w `sw.js`:
+Wdrożenie to sam `git push`. `CACHE_NAME` w `sw.js` **nie wymaga podnoszenia**.
 
-```js
-const CACHE_NAME = 'fightlog-v2';   // było v1
-```
+Szkielet jest serwowany strategią **stale-while-revalidate**: strona startuje
+natychmiast z cache'a, a w tle każdy plik jest sprawdzany warunkowo (ETag). Gdy
+serwer odda inną wersję, cache się aktualizuje, a aplikacja pokazuje toast
+„Nowa wersja — dotknij, żeby odświeżyć". Przeładowanie następuje dopiero po
+dotknięciu, żeby nie przerwać zapisywania serii w trakcie treningu.
 
-Stare cache są kasowane w zdarzeniu `activate`. Gdy nowa wersja jest gotowa,
-aplikacja pokazuje toast „Nowa wersja — dotknij, żeby odświeżyć"; podmiana
-workera następuje dopiero po dotknięciu, żeby nie przerwać zapisywania serii.
+Zmiana treści planu w `js/data/plan.js` to osobna sprawa — tam trzeba podnieść
+`PLAN_VERSION`, bo plan zapisany w `localStorage` jest nadpisywany tylko przez
+nowszą wersję seeda.
 
 Ruch do API Firebase (`firestore.googleapis.com`, `identitytoolkit.googleapis.com`
 i pokrewne) **omija service workera w całości** — Firestore ma własną warstwę

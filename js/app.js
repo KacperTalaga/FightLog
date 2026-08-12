@@ -110,15 +110,26 @@ function wireAuth() {
 /* ---------- Service worker ---------- */
 
 let reloading = false;
+let updatePrompted = false;
 
 /* Nowa wersja nie wchodzi sama — użytkownik może być w środku serii.
-   Toast czeka na dotknięcie, dopiero potem podmieniamy workera i odświeżamy. */
+   Toast czeka na dotknięcie, dopiero potem przeładowujemy.
+
+   Dwa źródła aktualizacji: zmiana samego sw.js (jest wtedy worker w stanie
+   waiting) albo zmiana plików aplikacji wykryta przez service workera
+   (wtedy wystarczy przeładowanie). */
 function promptUpdate(worker) {
+    if (updatePrompted) return;
+    updatePrompted = true;
+
     const element = toast('Nowa wersja — dotknij, żeby odświeżyć', 30000);
     element.classList.add('toast--action');
     element.addEventListener('click', () => {
         element.remove();
-        worker.postMessage({ type: 'SKIP_WAITING' });
+
+        if (worker) return worker.postMessage({ type: 'SKIP_WAITING' });
+        reloading = true;
+        window.location.reload();
     });
 }
 
@@ -146,6 +157,10 @@ async function registerServiceWorker() {
         if (reloading) return;
         reloading = true;
         window.location.reload();
+    });
+
+    navigator.serviceWorker.addEventListener('message', event => {
+        if (event.data?.type === 'CONTENT_UPDATED') promptUpdate(null);
     });
 
     try {

@@ -354,6 +354,10 @@ const sources = [...walk('css'), ...walk('js')].filter(path => /\.(css|js)$/.tes
 sources.forEach(path => check(`sw.js nie cache'uje ${path}`, shell.includes(path), shell));
 check('sw.js nie wersjonuje cache', /CACHE_NAME\s*=\s*'fightlog-v\d+'/.test(sw));
 check('sw.js nie omija API Firestore', sw.includes('firestore.googleapis.com'));
+check('sw.js nie wykrywa nowej wersji', sw.includes('CONTENT_UPDATED'));
+check('sw.js nadal na cache-first bez odświeżania', sw.includes('staleWhileRevalidate'));
+check('app.js nie reaguje na wykrytą aktualizację',
+    readFileSync(join(ROOT, 'js/app.js'), 'utf8').includes('CONTENT_UPDATED'));
 
 shell.filter(path => /\.(css|js|png)$/.test(path)).forEach(path => {
     let exists = true;
