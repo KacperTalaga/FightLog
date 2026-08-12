@@ -15,6 +15,23 @@ python -m http.server 8000
 Potem http://localhost:8000. Używaj `localhost`, a nie `127.0.0.1` — Firebase ma
 na liście dozwolonych domen tylko ten pierwszy adres.
 
+## Automatyczna rotacja ćwiczeń
+
+Raz na tydzień treningowy [`js/rotation.js`](js/rotation.js) sprawdza plan według
+reguł z bazy wiedzy i sam podmienia ćwiczenia:
+
+| Przesłanka | Próg |
+|---|---|
+| Stagnacja mimo deloadu | 3 sesje na tym samym ciężarze **i** ≥ 5 tygodni na ćwiczeniu |
+| Rutynowa rotacja | ≥ 10 tygodni na ćwiczeniu (zakres 8–12 z badań) |
+
+Zamiana zostaje w obrębie wzorca ruchowego z [`js/data/variants.js`](js/data/variants.js),
+maksymalnie dwie na tydzień. Ćwiczenie, które nigdy nie zostało wykonane, nie
+rotuje. Zmiana pojawia się w zakładce Plan z powodem i przyciskiem *Cofnij*.
+
+Ból i kolizja z treningiem walki — trzecia przesłanka z bazy wiedzy — pozostają
+poza automatem, bo nie ma ich z czego wyliczyć.
+
 ## Testy
 
 ```bash

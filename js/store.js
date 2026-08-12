@@ -23,7 +23,10 @@ export const DEFAULT_SETTINGS = {
     height: 183,
     targetWeight: 75,
     macros: { kcal: 2650, protein: 170, carbs: 310, fat: 75 },
-    restTimerSec: 90
+    restTimerSec: 90,
+    /* Tydzień, w którym ostatnio sprawdzano rotację ćwiczeń, i jej wynik. */
+    rotationWeek: null,
+    rotation: null
 };
 
 /* Uszkodzony wpis (ręczna edycja, przerwany zapis) nie może wywalić startu
@@ -172,18 +175,31 @@ export function getLatestWeight() {
 /* Plan z seeda wgrywamy przy pierwszym uruchomieniu i przy podbiciu
    PLAN_VERSION w kodzie — inaczej nowe ćwiczenia nigdy by nie dotarły
    do użytkownika, który raz odpalił aplikację. */
+/* seedVersion śledzi wersję danych z repo, version rośnie przy każdej edycji
+   planu (rotacja ćwiczeń). Bez tego rozdzielenia rotacje wywindowałyby version
+   ponad PLAN_VERSION i nowa treść planu z kodu nigdy by nie dotarła. */
 export function getPlan() {
     const stored = read(KEYS.plan, null);
-    if (stored?.days && stored.version >= PLAN_VERSION) return stored;
+    if (stored?.days && (stored.seedVersion ?? stored.version ?? 0) >= PLAN_VERSION) return stored;
 
-    const seeded = { version: PLAN_VERSION, days: PLAN, updatedAt: Date.now() };
+    const seeded = {
+        version: (stored?.version ?? 0) + 1,
+        seedVersion: PLAN_VERSION,
+        days: PLAN,
+        updatedAt: Date.now()
+    };
     write(KEYS.plan, seeded);
     return seeded;
 }
 
 export function savePlan(days) {
     const current = getPlan();
-    const updated = { version: current.version + 1, days, updatedAt: Date.now() };
+    const updated = {
+        version: current.version + 1,
+        seedVersion: current.seedVersion ?? PLAN_VERSION,
+        days,
+        updatedAt: Date.now()
+    };
     write(KEYS.plan, updated);
 
     remote?.savePlan(updated);

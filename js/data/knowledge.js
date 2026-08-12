@@ -42,7 +42,16 @@ export const KNOWLEDGE = [
         </ul>
         <p>Czego nie robić: nie zmieniaj ćwiczeń bazowych co blok. Wyciskanie, podciąganie i przysiad
         w jakiejś formie zostają — rotujesz akcesoria i izolację. Progresja liczy się per ćwiczenie,
-        więc każda zamiana zeruje historię i sugestie startują od nowa.</p>`
+        więc każda zamiana zeruje historię i sugestie startują od nowa.</p>
+        <p><strong>Aplikacja robi to za ciebie.</strong> Raz na tydzień treningowy sprawdza plan
+        według dwóch reguł z góry: stagnacja utrzymująca się co najmniej 5 tygodni (czyli mimo
+        deloadu) oraz 10 tygodni na tym samym ćwiczeniu. Zamiana zostaje w obrębie wzorca ruchowego
+        — wyciskanie zastępuje inne wyciskanie — więc struktura treningu się nie zmienia. Maksymalnie
+        dwie zmiany na tydzień, żeby nie stracić punktu odniesienia we wszystkim naraz.</p>
+        <p>Zmiana pokazuje się w zakładce <strong>Plan</strong> razem z powodem i przyciskiem
+        <em>Cofnij</em>. Ćwiczenie, którego nigdy nie wykonałeś, nie podlega rotacji — nie da się
+        stwierdzić, że przestało działać. Ból i kolizja z treningiem walki zostają po twojej
+        stronie: tego aplikacja nie wykryje.</p>`
     },
     {
         id: 'objetosc',

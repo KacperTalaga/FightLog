@@ -177,6 +177,53 @@
     line-height: 1.5;
 }
 
+/* ---------- Rotacja ćwiczeń ---------- */
+
+.banner--rotation {
+    border-left-color: var(--success);
+    color: var(--text-dim);
+}
+
+.rotation__title {
+    display: block;
+    color: var(--text);
+    margin-bottom: var(--space-2);
+}
+
+.rotation__list {
+    list-style: none;
+    margin-bottom: var(--space-3);
+}
+
+.rotation__list li {
+    padding: var(--space-2) 0;
+    border-top: 1px solid var(--border);
+}
+
+.rotation__list strong {
+    color: var(--text);
+}
+
+.rotation__day {
+    display: block;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+}
+
+.rotation__reason {
+    display: block;
+    font-size: var(--fs-xs);
+    color: var(--text-dim);
+}
+
+.rotation__actions {
+    display: flex;
+    gap: var(--space-2);
+}
+
 .hint {
     display: inline-block;
     font-size: var(--fs-xs);

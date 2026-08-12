@@ -217,6 +217,123 @@ check('średnia krocząca źle policzona', nutrition.movingAverage(weights).at(-
 check('stary pomiar wchodzi do okna 7 dni',
     nutrition.movingAverage([{ date: '2026-07-20', weight: 85 }, ...weights.slice(0, 2)]).at(-1).value === 79.2);
 
+/* ---------- Rotacja ćwiczeń ---------- */
+
+const rotation = await load('js/rotation.js');
+const variants = await load('js/data/variants.js');
+
+/* Katalog: spójność danych */
+const variantIds = variants.VARIANTS.map(item => item.id);
+check('duplikat id w katalogu wariantów', new Set(variantIds).size === variantIds.length,
+    variantIds.filter((id, index) => variantIds.indexOf(id) !== index));
+
+variants.VARIANTS.forEach(variant => {
+    check(`wariant ${variant.id} bez wzorca`, Boolean(variants.PATTERNS[variant.pattern]), variant.pattern);
+    check(`wariant ${variant.id} bez partii`, variant.muscles?.length > 0, variant.muscles);
+    check(`wariant ${variant.id} bez zakresu`, variant.repRange?.length === 2, variant.repRange);
+});
+
+/* Każde ćwiczenie z planu musi mieć wzorzec, inaczej nigdy nie zrotuje. */
+plan.days.flatMap(day => day.exercises).forEach(exercise => {
+    check(`ćwiczenie ${exercise.id} spoza katalogu wariantów`,
+        variants.patternOf(exercise.id) !== null, exercise.id);
+});
+
+/* Każdy wzorzec musi mieć co najmniej dwa realne cele rotacji — inaczej
+   zamiana nie miałaby na co podmienić. */
+Object.keys(variants.PATTERNS).forEach(pattern => {
+    const targets = variants.variantsOfPattern(pattern).filter(item => !item.legacy);
+    check(`wzorzec ${pattern} ma za mało wariantów`, targets.length >= 2, targets.length);
+});
+
+const rotationToday = new Date(2026, 9, 6);           // wtorek, 6 października
+const weekly = (weights, machine = null) => weights.map((weight, index) => {
+    /* Środy, żeby nie zderzyć się z datami sesji używanymi w testach logu. */
+    const date = new Date(2026, 6, 15 + index * 7);
+    const key = utils.dateKey(date);
+    return {
+        id: key, date: key, type: 'strength', machine,
+        exercises: [{
+            id: 'bench', name: 'Wyciskanie', machine: null,
+            sets: Array.from({ length: 4 }, () => ({ weight, reps: 8, dropset: null, done: true }))
+        }]
+    };
+});
+
+/* Ćwiczenie nigdy nietrenowane nie rotuje — nie da się powiedzieć,
+   że przestało działać. */
+check('rotacja ćwiczenia bez ani jednej sesji',
+    rotation.evaluateRotation(plan, [], { today: rotationToday }).length === 0);
+
+/* Rosnący ciężar przez 12 tygodni: brak stagnacji, ale próg czasu przekroczony. */
+const progressing = weekly([70, 72.5, 75, 77.5, 80, 82.5, 85, 87.5, 90, 92.5, 95, 97.5]);
+check('weeksOnExercise źle policzone',
+    rotation.weeksOnExercise('bench', progressing, rotationToday) === 12,
+    rotation.weeksOnExercise('bench', progressing, rotationToday));
+
+const timeBased = rotation.evaluateRotation(plan, progressing, { today: rotationToday });
+check('brak rotacji po 12 tygodniach', timeBased.length === 1, timeBased.length);
+check('zły powód rotacji', timeBased[0]?.reason === 'rotacja', timeBased[0]?.reason);
+check('rotacja wyszła poza wzorzec ruchowy',
+    variants.patternOf(timeBased[0].to.id) === variants.patternOf('bench'),
+    timeBased[0]?.to?.id);
+check('rotacja podstawiła ćwiczenie już obecne w planie',
+    !plan.days.flatMap(day => day.exercises).some(item => item.id === timeBased[0].to.id),
+    timeBased[0]?.to?.id);
+
+/* Ten sam ciężar tydzień w tydzień: stagnacja. */
+const stuck = weekly([80, 80, 80, 80, 80, 80, 80]);
+const stagnation = rotation.evaluateRotation(plan, stuck, { today: rotationToday });
+check('stagnacja nie wywołała rotacji', stagnation[0]?.reason === 'stagnacja', stagnation[0]?.reason);
+
+/* Stagnacja krótsza niż okno deloadu nie wystarcza. */
+const shortStuck = weekly([80, 80, 80]).map(item => ({ ...item }));
+check('rotacja przy zbyt krótkiej stagnacji',
+    rotation.evaluateRotation(plan, shortStuck, { today: new Date(2026, 7, 11) }).length === 0,
+    rotation.evaluateRotation(plan, shortStuck, { today: new Date(2026, 7, 11) }));
+
+/* Limit zmian na tydzień */
+check('przekroczony limit zmian',
+    rotation.evaluateRotation(plan, progressing, { today: rotationToday, limit: 1 }).length <= 1);
+
+/* Zastosowanie i cofnięcie */
+const rotated = rotation.applyRotation(plan.days, timeBased, rotationToday);
+const thursday = rotated.find(day => day.key === 'thursday');
+check('rotacja nie podmieniła ćwiczenia',
+    thursday.exercises.some(item => item.id === timeBased[0].to.id), thursday.exercises.map(e => e.id));
+check('rotacja nie usunęła starego ćwiczenia',
+    !thursday.exercises.some(item => item.id === 'bench'), thursday.exercises.map(e => e.id));
+check('rotacja zgubiła liczbę ćwiczeń',
+    thursday.exercises.length === plan.days.find(day => day.key === 'thursday').exercises.length);
+check('rotacja nie zapisała daty wprowadzenia',
+    thursday.exercises.find(item => item.id === timeBased[0].to.id).since === '2026-10-06');
+check('rotacja zmutowała oryginalny plan',
+    plan.days.find(day => day.key === 'thursday').exercises.some(item => item.id === 'bench'));
+
+const reverted = rotation.revertRotation(rotated, timeBased);
+check('cofnięcie nie przywróciło ćwiczenia',
+    reverted.find(day => day.key === 'thursday').exercises.some(item => item.id === 'bench'));
+
+/* Uruchomienie raz na tydzień */
+progressing.forEach(item => store.saveSession(item));
+const firstRun = rotation.runWeeklyRotation({ today: rotationToday });
+check('runWeeklyRotation nic nie zmieniło', firstRun?.length > 0, firstRun);
+check('rotacja nie trafiła do planu',
+    store.getPlan().days.find(day => day.key === 'thursday').exercises.some(item => item.id === firstRun[0].to.id));
+check('drugie uruchomienie w tym samym tygodniu zmieniło plan',
+    rotation.runWeeklyRotation({ today: rotationToday }) === null);
+check('rotacja nie zapisała się w ustawieniach',
+    store.getSettings().rotation?.changes?.length === firstRun.length);
+
+/* Seed z repo musi nadal docierać mimo podbitej wersji planu po rotacji. */
+check('rotacja zablokowała aktualizacje planu z kodu',
+    store.getPlan().seedVersion === plan.seedVersion, store.getPlan().seedVersion);
+
+check('cofnięcie z ustawień nie zadziałało', rotation.undoLastRotation() === true);
+check('cofnięcie nie przywróciło planu',
+    store.getPlan().days.find(day => day.key === 'thursday').exercises.some(item => item.id === 'bench'));
+check('cofnięcie nie wyczyściło komunikatu', store.getSettings().rotation === null);
+
 /* ---------- Widok logu ---------- */
 
 const { mountLog } = await load('js/views/log.js');

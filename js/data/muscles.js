@@ -4,6 +4,8 @@
    się objętość w literaturze treningowej i tak wychodzą sensowne liczby przy
    celu 10–20 serii tygodniowo na partię. */
 
+import { variantById } from './variants.js';
+
 export const MUSCLE_LABELS = {
     klatka: 'Klatka',
     plecy: 'Plecy',
@@ -52,8 +54,10 @@ const MUSCLES = {
     landmine: ['brzuch', 'barki']
 };
 
-/* Ćwiczenie spoza mapy (dodane ręcznie do planu) nie wywala liczenia —
-   po prostu nie trafia do żadnej partii. */
+/* Warianty z katalogu rotacji noszą własne mapowanie — pytamy najpierw jego,
+   żeby ćwiczenie wprowadzone automatycznie od razu liczyło się do objętości.
+   Ćwiczenie spoza obu źródeł nie wywala liczenia, po prostu nie trafia
+   do żadnej partii. */
 export function musclesFor(exerciseId) {
-    return MUSCLES[exerciseId] ?? [];
+    return variantById(exerciseId)?.muscles ?? MUSCLES[exerciseId] ?? [];
 }

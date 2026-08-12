@@ -4,6 +4,7 @@ import { $, $$ } from './utils.js';
 import { onChange } from './store.js';
 import { initSync, signIn, signOutUser, onStatus, onUser, describeAuthError, STATUS } from './sync.js';
 import { toast } from './toast.js';
+import { runWeeklyRotation } from './rotation.js';
 import { mountPlan } from './views/plan.js';
 import { mountLog } from './views/log.js';
 import { mountProgress } from './views/progress.js';
@@ -174,6 +175,14 @@ async function registerServiceWorker() {
 /* ---------- Start ---------- */
 
 function init() {
+    /* Rotacja przed pierwszym renderem — widok planu ma od razu pokazać
+       zaktualizowany tydzień, a nie ten sprzed zamiany. */
+    try {
+        runWeeklyRotation();
+    } catch (error) {
+        console.warn('FightLog: rotacja ćwiczeń nie wykonała się', error);
+    }
+
     Object.entries(VIEWS).forEach(([name, mount]) => mount($(`#view-${name}`)));
 
     $$('.tab-bar__btn').forEach(button => {

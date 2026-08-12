@@ -3,6 +3,7 @@
 import { escapeHtml, planDayIndex } from '../utils.js';
 import { getPlan, getSessions, getLatestWeight } from '../store.js';
 import { suggestNext, isDeloadWeek, formatLast, formatSuggestion, DELOAD_FACTOR } from '../progression.js';
+import { lastRotation, undoLastRotation, dismissRotation, ROTATE_AFTER_WEEKS } from '../rotation.js';
 
 const CHEVRON = `<svg class="day-card__chevron" viewBox="0 0 24 24" width="16" height="16" fill="none"
     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -35,7 +36,35 @@ function renderPlan() {
         .map((day, index) => renderDay(day, index === todayIndex, suggestFor, bodyweightKg))
         .join('');
 
-    return `<h1 class="view__title">Plan tygodnia</h1>${banner}${days}`;
+    return `<h1 class="view__title">Plan tygodnia</h1>${renderRotation(plan)}${banner}${days}`;
+}
+
+/* Zamiany są robione automatycznie, więc muszą być widoczne od razu po wejściu
+   — razem z powodem i możliwością cofnięcia. Cicha podmiana ćwiczenia
+   zaskoczyłaby cię dopiero przy stojaku. */
+function renderRotation(plan) {
+    const rotation = lastRotation();
+    if (!rotation?.changes?.length) return '';
+
+    const dayName = key => plan.days.find(day => day.key === key)?.day ?? key;
+    const items = rotation.changes.map(change => `
+        <li>
+            <span class="rotation__day">${escapeHtml(dayName(change.dayKey))}</span>
+            ${escapeHtml(change.from.name)} → <strong>${escapeHtml(change.to.name)}</strong>
+            <span class="rotation__reason">${change.reason === 'stagnacja'
+                ? `stagnacja mimo deloadu, ${change.weeks} tyg. na tym ćwiczeniu`
+                : `${change.weeks} tyg. bez zmiany (próg: ${ROTATE_AFTER_WEEKS})`}</span>
+        </li>`).join('');
+
+    return `
+    <div class="banner banner--rotation">
+        <strong class="rotation__title">Plan zaktualizowany automatycznie</strong>
+        <ul class="rotation__list">${items}</ul>
+        <div class="rotation__actions">
+            <button class="btn btn--small js-undo-rotation" type="button">Cofnij</button>
+            <button class="btn btn--small js-keep-rotation" type="button">Zostawiam</button>
+        </div>
+    </div>`;
 }
 
 function renderDay(day, isToday, suggestFor, bodyweightKg) {
@@ -118,6 +147,16 @@ function renderFinisher(finisher) {
 }
 
 function handleDayToggle(event) {
+    const undo = event.target.closest('.js-undo-rotation');
+    const keep = event.target.closest('.js-keep-rotation');
+
+    if (undo || keep) {
+        if (undo) undoLastRotation();
+        else dismissRotation();
+
+        return mountPlan(event.currentTarget);
+    }
+
     const header = event.target.closest('.day-card__header');
     if (!header) return;
 
